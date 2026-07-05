@@ -25,7 +25,7 @@ export type DishFormValues = {
     name: string;
     description: string;
     price: string;
-    category: "appetizer" | "main" | "dessert" | "beverage";
+    category: "appetizer" | "main" | "dessert" | "beverage" | "breakfast";
     imageUrl: string;
     featured: boolean;
     stock: string; // empty string = unlimited
@@ -146,6 +146,7 @@ export function DishFormDialog({
                                     <SelectItem value="main">Main</SelectItem>
                                     <SelectItem value="dessert">Dessert</SelectItem>
                                     <SelectItem value="beverage">Beverage</SelectItem>
+                                    <SelectItem value="breakfast">Breakfast</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

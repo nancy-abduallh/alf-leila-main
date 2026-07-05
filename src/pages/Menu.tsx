@@ -8,14 +8,15 @@ import { toast } from "sonner";
 
 gsap.registerPlugin(ScrollTrigger);
 
-type Category = "all" | "appetizer" | "main" | "dessert" | "beverage";
+type Category = "all" | "appetizer" | "main" | "dessert" | "beverage" | "breakfast";
 
 const categories: { label: string; value: Category }[] = [
   { label: "All", value: "all" },
-  { label: "Appetizers", value: "appetizer" },
   { label: "Main Courses", value: "main" },
+  { label: "Appetizers", value: "appetizer" },
   { label: "Desserts", value: "dessert" },
   { label: "Beverages", value: "beverage" },
+  { label: "Breakfast", value: "breakfast" },
 ];
 
 export default function Menu() {

@@ -4,7 +4,7 @@ import { getDb } from "./queries/connection";
 import { dishes } from "@db/schema";
 import { eq } from "drizzle-orm";
 
-const categoryEnum = z.enum(["appetizer", "main", "dessert", "beverage"]);
+const categoryEnum = z.enum(["appetizer", "main", "dessert", "beverage", "breakfast"]);
 
 export const dishRouter = createRouter({
   list: publicQuery

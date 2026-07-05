@@ -63,9 +63,31 @@ export default function Footer() {
         </div>
 
         <div className="mt-12 pt-8 border-t border-gold-primary/10 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-cream/30 text-xs">
-            &copy; 2026 Alf Leila wa Leila. All rights reserved.
-          </p>
+          <div className="mt-12 pt-8 border-t border-gold-primary/10 flex items-center justify-between">
+            <div className="flex flex-col gap-2">
+              <p className="text-cream/30 text-xs">
+                &copy; 2026 Alf Leila wa Leila. All rights reserved.
+              </p>
+
+              <p className="text-cream/30 text-xs">
+                Developed with{" "}
+                <span className="text-red-500">&#10084;</span>{" "}
+                by{" "}
+                <a
+                  href="https://nancy-abduallh-portfolio.vercel.app/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-cream hover:text-gold transition-colors duration-300 hover:underline underline-offset-4"
+                >
+                  Nancy Abduallh
+                </a>
+              </p>
+            </div>
+
+            <div className="flex items-center gap-4">
+              {/* Social icons */}
+            </div>
+          </div>
           <div className="flex items-center gap-4">
             <a
               href="#"
@@ -84,6 +106,6 @@ export default function Footer() {
           </div>
         </div>
       </div>
-    </footer>
+    </footer >
   );
 }

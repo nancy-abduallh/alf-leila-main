@@ -31,7 +31,7 @@ export const dishes = mysqlTable("dishes", {
   name: varchar("name", { length: 100 }).notNull(),
   description: text("description"),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
-  category: mysqlEnum("category", ["appetizer", "main", "dessert", "beverage"]).notNull(),
+  category: mysqlEnum("category", ["appetizer", "main", "dessert", "beverage", "breakfast"]).notNull(),
   imageUrl: varchar("imageUrl", { length: 255 }),
   featured: boolean("featured").default(false),
   stock: int("stock"), // null = unlimited

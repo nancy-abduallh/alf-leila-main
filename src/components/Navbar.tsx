@@ -37,9 +37,10 @@ export default function Navbar() {
   const isHome = location.pathname === "/";
 
   const navLinks = [
+    { label: "HOME", href: "/" },
     { label: "MENU", href: "/menu" },
     { label: "EXPERIENCE", href: "/story" },
-    { label: "RESERVE", href: "/reserve" },
+    { label: "RESERVE TABLE", href: "/reserve" },
     { label: "STORY", href: "/story" },
     { label: "CONTACT", href: "/contact" },
   ];
