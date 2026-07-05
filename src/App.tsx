@@ -17,6 +17,7 @@ import MyReservations from "./pages/MyReservations";
 import Admin from "./pages/Admin";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import AdminLogin from "./pages/AdminLogin";
 import NotFound from "./pages/NotFound";
 
 function PageViewTracker() {
@@ -48,6 +49,7 @@ export default function App() {
         <Route path="/my-orders" element={<MyOrders />} />
         <Route path="/my-reservations" element={<MyReservations />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="*" element={<NotFound />} />

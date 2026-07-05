@@ -51,6 +51,7 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+import { ADMIN_LOGIN_PATH } from "@/const";
 
 const reservationStatusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-400",
@@ -90,7 +91,10 @@ export default function Admin() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!authLoading && (!user || !isAdmin)) {
+    if (authLoading) return;
+    if (!user) {
+      navigate(ADMIN_LOGIN_PATH);
+    } else if (!isAdmin) {
       navigate("/");
     }
   }, [user, isAdmin, authLoading, navigate]);

@@ -14,7 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 export default function Register() {
     const navigate = useNavigate();
-    const { register, isRegistering, registerError, refresh } = useAuth();
+    const { register, isRegistering, registerError } = useAuth();
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -23,8 +23,7 @@ export default function Register() {
         e.preventDefault();
         try {
             await register(name, email, password);
-            const { data: freshUser } = await refresh();
-            navigate(freshUser?.role === "admin" ? "/admin" : "/");
+            navigate("/");
         } catch {
             // surfaced via registerError
         }
