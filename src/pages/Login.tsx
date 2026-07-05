@@ -14,7 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login, isLoggingIn, loginError } = useAuth();
+  const { login, isLoggingIn, loginError, refresh } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -22,7 +22,8 @@ export default function Login() {
     e.preventDefault();
     try {
       await login(email, password);
-      navigate("/");
+      const { data: freshUser } = await refresh();
+      navigate(freshUser?.role === "admin" ? "/admin" : "/");
     } catch {
       // surfaced via loginError
     }
