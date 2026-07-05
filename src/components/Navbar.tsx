@@ -125,7 +125,7 @@ export default function Navbar() {
               </DropdownMenu>
             ) : (
               <Link
-                to="/reserve"
+                to="/login"
                 className="px-5 py-2 border border-gold-primary text-gold-primary text-[13px] font-medium tracking-[0.05em] rounded-full hover:bg-gold-primary hover:text-table-dark transition-all duration-300"
               >
                 Sign In

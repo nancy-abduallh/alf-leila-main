@@ -150,7 +150,7 @@ export default function Menu() {
                         {dish.price} EGP
                       </span>
                     </div>
-                    <p className="text-cream/50 text-sm leading-relaxed line-clamp-2 mb-4">
+                    <p className="text-cream/50 text-sm leading-relaxed mb-4">
                       {dish.description}
                     </p>
                     <div className="flex items-center justify-between">

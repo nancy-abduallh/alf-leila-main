@@ -32,6 +32,9 @@ function PageViewTracker() {
   return null;
 }
 
+//favicon
+
+
 export default function App() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith("/admin");
