@@ -1,3 +1,4 @@
+// api/lib/paymob.ts
 import { createHmac } from "crypto";
 import { env } from "./env";
 
@@ -18,7 +19,10 @@ async function getAuthToken(): Promise<string> {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ api_key: env.paymobApiKey }),
     });
-    if (!res.ok) throw new Error("Paymob authentication failed");
+    if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`Paymob authentication failed: ${res.status} ${body}`);
+    }
     const data = (await res.json()) as { token: string };
     return data.token;
 }
@@ -40,7 +44,10 @@ async function createPaymobOrder(
             items: [],
         }),
     });
-    if (!res.ok) throw new Error("Paymob order creation failed");
+    if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`Paymob order creation failed: ${res.status} ${body}`);
+    }
     const data = (await res.json()) as { id: number };
     return data.id;
 }
@@ -51,6 +58,13 @@ async function getPaymentKey(
     paymobOrderId: number,
     billingData: PaymobBillingData,
 ): Promise<string> {
+    const integrationId = Number(env.paymobIntegrationId);
+    if (Number.isNaN(integrationId)) {
+        throw new Error(
+            `Invalid PAYMOB_INTEGRATION_ID: "${env.paymobIntegrationId}" is not a number`,
+        );
+    }
+
     const res = await fetch(`${BASE_URL}/acceptance/payment_keys`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -75,10 +89,14 @@ async function getPaymentKey(
                 state: "NA",
             },
             currency: "EGP",
-            integration_id: env.paymobIntegrationId,
+            // Paymob requires this as a number, not a string.
+            integration_id: integrationId,
         }),
     });
-    if (!res.ok) throw new Error("Paymob payment key request failed");
+    if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`Paymob payment key request failed: ${res.status} ${body}`);
+    }
     const data = (await res.json()) as { token: string };
     return data.token;
 }

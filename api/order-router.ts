@@ -1,3 +1,4 @@
+// api/order-router.ts
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { eq, desc, inArray } from "drizzle-orm";
@@ -111,7 +112,11 @@ export const orderRouter = createRouter({
                     .update(orders)
                     .set({ paymobOrderId: String(result.paymobOrderId) })
                     .where(eq(orders.id, orderId));
-            } catch {
+            } catch (err) {
+                // Log the real reason instead of swallowing it — this is what was
+                // making "Could not initiate payment" impossible to debug.
+                console.error("Paymob payment initiation failed for order", orderId, err);
+
                 await db.update(orders).set({ status: "failed" }).where(eq(orders.id, orderId));
                 throw new TRPCError({
                     code: "INTERNAL_SERVER_ERROR",
