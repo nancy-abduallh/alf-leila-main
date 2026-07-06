@@ -1,6 +1,6 @@
 // api/lib/paymob.ts
 import { createHmac } from "crypto";
-import { env } from "./env";
+import { getPaymobConfig } from "./env";
 
 const BASE_URL = "https://accept.paymob.com/api";
 
@@ -11,13 +11,11 @@ export type PaymobBillingData = {
     phone_number: string;
 };
 
-
-
-async function getAuthToken(): Promise<string> {
+async function getAuthToken(apiKey: string): Promise<string> {
     const res = await fetch(`${BASE_URL}/auth/tokens`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ api_key: env.paymobApiKey }),
+        body: JSON.stringify({ api_key: apiKey }),
     });
     if (!res.ok) {
         const body = await res.text().catch(() => "");
@@ -57,11 +55,12 @@ async function getPaymentKey(
     amountCents: number,
     paymobOrderId: number,
     billingData: PaymobBillingData,
+    integrationId: string,
 ): Promise<string> {
-    const integrationId = Number(env.paymobIntegrationId);
-    if (Number.isNaN(integrationId)) {
+    const parsedIntegrationId = Number(integrationId);
+    if (Number.isNaN(parsedIntegrationId)) {
         throw new Error(
-            `Invalid PAYMOB_INTEGRATION_ID: "${env.paymobIntegrationId}" is not a number`,
+            `Invalid PAYMOB_INTEGRATION_ID: "${integrationId}" is not a number`,
         );
     }
 
@@ -89,8 +88,7 @@ async function getPaymentKey(
                 state: "NA",
             },
             currency: "EGP",
-            // Paymob requires this as a number, not a string.
-            integration_id: integrationId,
+            integration_id: parsedIntegrationId,
         }),
     });
     if (!res.ok) {
@@ -106,7 +104,9 @@ export async function initiatePaymobPayment(params: {
     merchantOrderId: string;
     billingData: PaymobBillingData;
 }): Promise<{ paymobOrderId: number; iframeUrl: string }> {
-    const authToken = await getAuthToken();
+    const { apiKey, integrationId, iframeId } = getPaymobConfig();
+
+    const authToken = await getAuthToken(apiKey);
     const paymobOrderId = await createPaymobOrder(
         authToken,
         params.amountCents,
@@ -117,8 +117,9 @@ export async function initiatePaymobPayment(params: {
         params.amountCents,
         paymobOrderId,
         params.billingData,
+        integrationId,
     );
-    const iframeUrl = `https://accept.paymob.com/api/acceptance/iframes/${env.paymobIframeId}?payment_token=${paymentKey}`;
+    const iframeUrl = `https://accept.paymob.com/api/acceptance/iframes/${iframeId}?payment_token=${paymentKey}`;
     return { paymobOrderId, iframeUrl };
 }
 
@@ -162,12 +163,14 @@ export function verifyPaymobHmac(
     transaction: Record<string, unknown>,
     receivedHmac: string,
 ): boolean {
+    const { hmacSecret } = getPaymobConfig();
+
     const concatenated = HMAC_FIELD_ORDER.map((field) => {
         const value = getNestedValue(transaction, field);
         return value === null || value === undefined ? "" : String(value);
     }).join("");
 
-    const computed = createHmac("sha512", env.paymobHmacSecret)
+    const computed = createHmac("sha512", hmacSecret)
         .update(concatenated)
         .digest("hex");
 
