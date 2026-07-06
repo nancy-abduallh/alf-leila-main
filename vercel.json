@@ -3,17 +3,13 @@
     "outputDirectory": "dist/public",
     "rewrites": [
         {
-            "source": "/api/(.*)",
-            "destination": "/api/$1"
-        },
-        {
             "source": "/((?!api/).*)",
             "destination": "/index.html"
         }
     ],
     "functions": {
         "api/**/*.ts": {
-            "maxDuration": 30
+            "maxDuration": 10
         }
     }
 }

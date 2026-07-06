@@ -82,12 +82,13 @@ function buildPool() {
     password: decodeURIComponent(url.password),
     database: url.pathname.replace(/^\//, ""),
     ssl,
-    // Fail fast instead of hanging until the serverless function's max
-    // duration is hit (which shows up as an opaque 504 GATEWAY_TIMEOUT
-    // with no useful message). If this fires, the error will say
-    // "connect ETIMEDOUT" or similar — almost always means Aiven's
-    // "Allowed IP Addresses" list is blocking Vercel's outbound IP.
-    connectTimeout: 6000,
+    // Fail well inside Vercel Hobby's 10s function limit instead of
+    // hanging until the platform kills the invocation with an opaque
+    // 504 GATEWAY_TIMEOUT / FUNCTION_INVOCATION_TIMEOUT. If this fires,
+    // the error will say "connect ETIMEDOUT" — almost always means
+    // Aiven's "Allowed IP Addresses" list is blocking Vercel's outbound
+    // traffic, or the DATABASE_URL host/port is wrong.
+    connectTimeout: 4000,
     connectionLimit: 3,
     maxIdle: 3,
     idleTimeout: 30000,
@@ -125,6 +126,8 @@ export async function resetDb() {
  * Runs a promise with a hard timeout so a hung network call surfaces a
  * readable error instead of running out the clock on the whole
  * serverless function (which just shows up as a bare 504 in Vercel).
+ * Kept short — Vercel Hobby caps functions at 10s total, so every
+ * timeout in this file needs to leave headroom for that.
  */
 export async function withTimeout<T>(
   promise: Promise<T>,
@@ -139,8 +142,8 @@ export async function withTimeout<T>(
           new Error(
             `${label} timed out after ${ms}ms. This almost always means ` +
             `Aiven's "Allowed IP Addresses" list is blocking Vercel's ` +
-            `outbound connections — set it to 0.0.0.0/0 (or add Vercel's ` +
-            `IP ranges) in the Aiven console under your service → ` +
+            `outbound connections — set it to 0.0.0.0/0 and click ` +
+            `"Save changes" in the Aiven console under your service → ` +
             `Overview → "Allowed IP Addresses".`,
           ),
         ),

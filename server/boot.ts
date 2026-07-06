@@ -21,10 +21,11 @@ app.use(bodyLimit({ maxSize: 50 * 1024 * 1024 }));
 app.get("/api/health", async (c) => {
   try {
     const db = getDb();
-    await withTimeout(db.execute(sql`SELECT 1`), 8000, "Database connection");
+    // One round trip instead of two sequential ones — keeps total time
+    // well under Vercel Hobby's 10s function cap even on a cold start.
     const rows = await withTimeout(
       db.select({ count: sql<number>`COUNT(*)` }).from(dishes),
-      8000,
+      6000,
       "Database query",
     );
     return c.json({

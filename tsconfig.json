@@ -1,6 +1,5 @@
 // tsconfig.json
 {
-  "files": [],
   "compilerOptions": {
     "target": "ES2022",
     "lib": [
