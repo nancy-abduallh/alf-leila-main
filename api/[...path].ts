@@ -47,8 +47,10 @@ function loadApp(): Promise<Hono<any>> {
 // /api/trpc/* call was coming back as a bare 404 instead of reaching
 // our Hono routes at all.
 const bridge = new Hono();
-bridge.all("*", async (c) => {
+    bridge.all("*", async (c) => {
     const app = await loadApp();
+    // Vercel's `c.req.raw` is already a Web Standard Request object.
+    // Hono's `app.fetch` expects a Request object and returns a Response.
     return app.fetch(c.req.raw);
 });
 
