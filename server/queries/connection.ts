@@ -24,11 +24,6 @@ function resolveSsl(url: URL) {
 
   if (!wantsSsl) return undefined;
 
-  // mysql2 doesn't understand the `ssl-mode=REQUIRED` query parameter that
-  // Aiven's example connection string uses (that syntax comes from
-  // MySQL Connector/J / the mysql CLI, not the mysql2 npm package), so it
-  // never enables TLS on its own just from the raw string. We translate
-  // that intent into a real `ssl` option ourselves here.
   return env.databaseCaCert
     ? {
       ca: env.databaseCaCert,
@@ -45,7 +40,24 @@ function resolveSsl(url: URL) {
 }
 
 function buildPool() {
-  const url = new URL(env.databaseUrl);
+  let url: URL;
+  try {
+    url = new URL(env.databaseUrl);
+  } catch {
+    const masked = env.databaseUrl.replace(/:[^:@]*@/, ":****@");
+    throw new Error(
+      `DATABASE_URL could not be parsed as a valid URL (got: "${masked}"). ` +
+      `Make sure it starts with "mysql://" and that special characters ` +
+      `in the username/password (@ : / ? # % +) are percent-encoded.`,
+    );
+  }
+
+  if (url.protocol !== "mysql:") {
+    throw new Error(
+      `DATABASE_URL must start with "mysql://" (got protocol "${url.protocol}").`,
+    );
+  }
+
   return mysql.createPool({
     host: url.hostname,
     port: url.port ? Number(url.port) : 3306,

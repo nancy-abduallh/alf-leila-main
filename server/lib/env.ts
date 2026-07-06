@@ -2,15 +2,22 @@ import { config } from "dotenv";
 config();
 
 function required(key: string): string {
-  const value = process.env[key];
+  const value = process.env[key]?.trim();
   if (!value) {
-    throw new Error(`Environment variable ${key} is required`);
+    throw new Error(
+      `Environment variable ${key} is required but is missing/empty. ` +
+      `Set it in Vercel → Project Settings → Environment Variables ` +
+      `(for both Production and Preview), then trigger a NEW ` +
+      `deployment — editing an env var does not update deployments ` +
+      `that already exist.`,
+    );
   }
   return value;
 }
 
 function optional(key: string, defaultValue?: string): string | undefined {
-  return process.env[key] || defaultValue;
+  const value = process.env[key]?.trim();
+  return value || defaultValue;
 }
 
 export const env = {
@@ -24,13 +31,11 @@ export const env = {
   jwtSecret: required("JWT_SECRET"),
   ownerEmail: optional("OWNER_EMAIL"),
 
-
   paymobApiKey: optional("PAYMOB_API_KEY"),
   paymobIntegrationId: optional("PAYMOB_INTEGRATION_ID"),
   paymobIframeId: optional("PAYMOB_IFRAME_ID"),
   paymobHmacSecret: optional("PAYMOB_HMAC_SECRET"),
 };
-
 
 export function getPaymobConfig() {
   const missing: string[] = [];
