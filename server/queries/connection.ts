@@ -99,7 +99,7 @@ export function getDb() {
   if (!instance) {
     pool = buildPool();
     instance = drizzle(pool, {
-      mode: "planetscale",
+      mode: "default",
       schema: fullSchema,
     });
   }
