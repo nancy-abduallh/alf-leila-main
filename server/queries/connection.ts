@@ -58,13 +58,23 @@ function buildPool() {
     );
   }
 
+  const ssl = resolveSsl(url);
+
+  // Deliberately no password in this log line — safe to see in Vercel's
+  // Function logs. Use this to confirm the deployed function is actually
+  // pointed at the host/db you expect (compare against your local .env
+  // and the Aiven console).
+  console.log(
+    `[db] connecting to mysql://${decodeURIComponent(url.username)}@${url.hostname}:${url.port || 3306}/${url.pathname.replace(/^\//, "")} (ssl: ${ssl ? "on" : "off"})`,
+  );
+
   return mysql.createPool({
     host: url.hostname,
     port: url.port ? Number(url.port) : 3306,
     user: decodeURIComponent(url.username),
     password: decodeURIComponent(url.password),
     database: url.pathname.replace(/^\//, ""),
-    ssl: resolveSsl(url),
+    ssl,
   });
 }
 

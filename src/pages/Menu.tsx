@@ -3,7 +3,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { trpc } from "@/providers/trpc";
 import { useCart } from "@/providers/cart";
-import { Search, SlidersHorizontal, Plus } from "lucide-react";
+import { Search, SlidersHorizontal, Plus, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -25,7 +25,12 @@ export default function Menu() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const { addItem } = useCart();
 
-  const { data: allDishes, isLoading } = trpc.dish.list.useQuery(
+  const {
+    data: allDishes,
+    isLoading,
+    isError,
+    error,
+  } = trpc.dish.list.useQuery(
     activeCategory !== "all" ? { category: activeCategory } : undefined,
   );
 
@@ -121,6 +126,18 @@ export default function Menu() {
             {[...Array(6)].map((_, i) => (
               <div key={i} className="animate-pulse bg-table-mid rounded-lg h-80" />
             ))}
+          </div>
+        ) : isError ? (
+          <div className="text-center py-20 max-w-lg mx-auto">
+            <AlertTriangle className="w-10 h-10 text-red-400/70 mx-auto mb-4" />
+            <p className="text-cream/70 text-lg">Couldn&apos;t load the menu.</p>
+            <p className="text-cream/40 text-sm mt-2 break-words">
+              {error?.message || "Unknown error contacting the server."}
+            </p>
+            <p className="text-cream/30 text-xs mt-4">
+              If this mentions a database issue, check the DATABASE_URL
+              environment variable and visit /api/health for details.
+            </p>
           </div>
         ) : filteredDishes && filteredDishes.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

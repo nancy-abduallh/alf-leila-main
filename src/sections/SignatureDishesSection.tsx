@@ -48,7 +48,7 @@ function DishCard({
 
 export default function SignatureDishesSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
-  const { data: dishes, isLoading } = trpc.dish.featured.useQuery();
+  const { data: dishes, isLoading, isError, error } = trpc.dish.featured.useQuery();
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -96,6 +96,11 @@ export default function SignatureDishesSection() {
               <div key={i} className="animate-pulse bg-table-dark rounded h-80" />
             ))}
           </div>
+        ) : isError ? (
+          <p className="text-red-400/80 text-center max-w-md mx-auto text-sm">
+            Couldn&apos;t load dishes: {error?.message || "unknown error"}. Check
+            /api/health and your DATABASE_URL configuration.
+          </p>
         ) : dishes && dishes.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {dishes.map((dish, i) => (
