@@ -9,7 +9,8 @@ const fullSchema = { ...schema, ...relations };
 
 import type { MySql2Database } from "drizzle-orm/mysql2";
 
-let instance: MySql2Database<typeof fullSchema>;
+let instance: MySql2Database<typeof fullSchema> | undefined;
+let pool: mysql.Pool | undefined;
 
 function resolveSsl(url: URL) {
   const sslMode = (
@@ -59,6 +60,15 @@ function buildPool() {
     );
   }
 
+  if (!url.password || url.password === "YOUR_REAL_PASSWORD") {
+    throw new Error(
+      `DATABASE_URL still has a placeholder password ("${url.password || "<empty>"}"). ` +
+      `Copy the real password from Aiven → your service → Overview → ` +
+      `Connection information → "Click to reveal password", percent-encode ` +
+      `any special characters, update DATABASE_URL in Vercel, then redeploy.`,
+    );
+  }
+
   const ssl = resolveSsl(url);
 
   console.log(
@@ -77,7 +87,7 @@ function buildPool() {
     // with no useful message). If this fires, the error will say
     // "connect ETIMEDOUT" or similar — almost always means Aiven's
     // "Allowed IP Addresses" list is blocking Vercel's outbound IP.
-    connectTimeout: 8000,
+    connectTimeout: 6000,
     connectionLimit: 3,
     maxIdle: 3,
     idleTimeout: 30000,
@@ -86,12 +96,29 @@ function buildPool() {
 
 export function getDb() {
   if (!instance) {
-    instance = drizzle(buildPool(), {
+    pool = buildPool();
+    instance = drizzle(pool, {
       mode: "planetscale",
       schema: fullSchema,
     });
   }
   return instance;
+}
+
+/**
+ * Drops the cached pool so the next getDb() call builds a fresh one
+ * instead of reusing a pool whose connections may be stuck. Call this
+ * after a connection failure so a warm serverless instance doesn't keep
+ * hammering the same broken pool on every subsequent request.
+ */
+export async function resetDb() {
+  try {
+    await pool?.end();
+  } catch {
+    // discarding it anyway
+  }
+  pool = undefined;
+  instance = undefined;
 }
 
 /**
@@ -113,7 +140,8 @@ export async function withTimeout<T>(
             `${label} timed out after ${ms}ms. This almost always means ` +
             `Aiven's "Allowed IP Addresses" list is blocking Vercel's ` +
             `outbound connections — set it to 0.0.0.0/0 (or add Vercel's ` +
-            `IP ranges) in the Aiven console.`,
+            `IP ranges) in the Aiven console under your service → ` +
+            `Overview → "Allowed IP Addresses".`,
           ),
         ),
       ms,

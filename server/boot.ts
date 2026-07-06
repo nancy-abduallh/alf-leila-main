@@ -7,7 +7,7 @@ import { sql } from "drizzle-orm";
 import { appRouter } from "./router";
 import { createContext } from "./context";
 import { handlePaymobWebhook } from "./webhooks/paymob";
-import { getDb, withTimeout } from "./queries/connection";
+import { getDb, withTimeout, resetDb } from "./queries/connection";
 import { dishes } from "@db/schema";
 
 const app = new Hono<{ Bindings: HttpBindings }>();
@@ -16,21 +16,17 @@ app.use(bodyLimit({ maxSize: 50 * 1024 * 1024 }));
 
 // Diagnostic route: after deploying, open
 //   https://<your-app>.vercel.app/api/health
-// in the browser.
-// - { ok: false, db: "error", message: ... } means the app couldn't even
-//   connect (bad DATABASE_URL, blocked by Aiven's IP allowlist, wrong
-//   credentials, etc.) — the "message" field tells you exactly why.
-// - { ok: true, db: "connected", dishCount: 0 } means the connection
-//   works fine but the table Vercel is reading from is actually empty —
-//   which usually means your local seed/push script pointed at a
-//   *different* database than the one configured here.
-// - { ok: true, db: "connected", dishCount: 24 } means everything is
-//   wired up correctly.
+// - { ok: false, message: ... } tells you exactly why the DB isn't reachable.
+// - { ok: true, db: "connected", dishCount: N } means everything is wired up.
 app.get("/api/health", async (c) => {
   try {
     const db = getDb();
-    await withTimeout(db.execute(sql`SELECT 1`), 10000, "Database connection");
-    const rows = await db.select({ count: sql<number>`COUNT(*)` }).from(dishes);
+    await withTimeout(db.execute(sql`SELECT 1`), 8000, "Database connection");
+    const rows = await withTimeout(
+      db.select({ count: sql<number>`COUNT(*)` }).from(dishes),
+      8000,
+      "Database query",
+    );
     return c.json({
       ok: true,
       db: "connected",
@@ -38,6 +34,10 @@ app.get("/api/health", async (c) => {
     });
   } catch (error) {
     console.error("Health check failed:", error);
+    // Discard the pool so the next request starts fresh instead of
+    // retrying against the same broken connections for the lifetime of
+    // this warm serverless instance.
+    await resetDb();
     return c.json(
       {
         ok: false,
