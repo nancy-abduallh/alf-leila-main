@@ -1,3 +1,4 @@
+// tsconfig.json
 {
   "files": [],
   "references": [
@@ -12,6 +13,17 @@
     }
   ],
   "compilerOptions": {
+    "target": "ES2022",
+    "lib": [
+      "ES2022"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
     "baseUrl": ".",
     "paths": {
       "@/*": [
@@ -24,5 +36,11 @@
         "./db/*"
       ]
     }
-  }
+  },
+  "include": [
+    "server",
+    "api",
+    "contracts",
+    "db"
+  ]
 }

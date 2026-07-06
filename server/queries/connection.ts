@@ -1,3 +1,4 @@
+// server/queries/connection.ts
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import { env } from "../lib/env";
@@ -32,9 +33,9 @@ function resolveSsl(url: URL) {
     }
     : {
       minVersion: "TLSv1.2" as const,
-      // No CA certificate supplied via DATABASE_CA_CERT. The connection
-      // is still encrypted, we just can't verify the server's cert chain
-      // without the provider's CA bundle.
+      // No DATABASE_CA_CERT set — connection is still encrypted, but we
+      // can't verify Aiven's cert chain. Set DATABASE_CA_CERT (contents
+      // of ca.pem) in Vercel env vars to switch to full verification.
       rejectUnauthorized: false,
     };
 }
@@ -60,11 +61,8 @@ function buildPool() {
 
   const ssl = resolveSsl(url);
 
-  // Deliberately no password in this log line — safe to see in Vercel's
-  // Function logs. Use this to confirm the deployed function is actually
-  // pointed at the host/db you expect.
   console.log(
-    `[db] connecting to mysql://${decodeURIComponent(url.username)}@${url.hostname}:${url.port || 3306}/${url.pathname.replace(/^\//, "")} (ssl: ${ssl ? "on" : "off"})`,
+    `[db] connecting to mysql://${decodeURIComponent(url.username)}@${url.hostname}:${url.port || 3306}/${url.pathname.replace(/^\//, "")} (ssl: ${ssl ? "on" : "off"}, caCert: ${env.databaseCaCert ? "provided" : "missing"})`,
   );
 
   return mysql.createPool({
@@ -76,12 +74,10 @@ function buildPool() {
     ssl,
     // Fail fast instead of hanging until the serverless function's max
     // duration is hit (which shows up as an opaque 504 GATEWAY_TIMEOUT
-    // with no useful message). If this ever fires, the error will say
-    // "connect ETIMEDOUT" — check the provider's IP allowlist/firewall.
+    // with no useful message). If this fires, the error will say
+    // "connect ETIMEDOUT" or similar — almost always means Aiven's
+    // "Allowed IP Addresses" list is blocking Vercel's outbound IP.
     connectTimeout: 8000,
-    // Serverless functions can spin up many concurrent pool instances
-    // (one per cold-started container). Keep each pool's footprint small
-    // so we don't exhaust the database's max connection count under load.
     connectionLimit: 3,
     maxIdle: 3,
     idleTimeout: 30000,
@@ -96,4 +92,36 @@ export function getDb() {
     });
   }
   return instance;
+}
+
+/**
+ * Runs a promise with a hard timeout so a hung network call surfaces a
+ * readable error instead of running out the clock on the whole
+ * serverless function (which just shows up as a bare 504 in Vercel).
+ */
+export async function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  label: string,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () =>
+        reject(
+          new Error(
+            `${label} timed out after ${ms}ms. This almost always means ` +
+            `Aiven's "Allowed IP Addresses" list is blocking Vercel's ` +
+            `outbound connections — set it to 0.0.0.0/0 (or add Vercel's ` +
+            `IP ranges) in the Aiven console.`,
+          ),
+        ),
+      ms,
+    );
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    clearTimeout(timer!);
+  }
 }

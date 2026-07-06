@@ -1,3 +1,4 @@
+// server/boot.ts
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import type { HttpBindings } from "@hono/node-server";
@@ -6,7 +7,7 @@ import { sql } from "drizzle-orm";
 import { appRouter } from "./router";
 import { createContext } from "./context";
 import { handlePaymobWebhook } from "./webhooks/paymob";
-import { getDb } from "./queries/connection";
+import { getDb, withTimeout } from "./queries/connection";
 import { dishes } from "@db/schema";
 
 const app = new Hono<{ Bindings: HttpBindings }>();
@@ -28,7 +29,7 @@ app.use(bodyLimit({ maxSize: 50 * 1024 * 1024 }));
 app.get("/api/health", async (c) => {
   try {
     const db = getDb();
-    await db.execute(sql`SELECT 1`);
+    await withTimeout(db.execute(sql`SELECT 1`), 10000, "Database connection");
     const rows = await db.select({ count: sql<number>`COUNT(*)` }).from(dishes);
     return c.json({
       ok: true,
