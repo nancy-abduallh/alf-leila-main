@@ -12,6 +12,14 @@ import type { MySql2Database } from "drizzle-orm/mysql2";
 let instance: MySql2Database<typeof fullSchema> | undefined;
 let pool: mysql.Pool | undefined;
 
+function isLocalHost(hostname: string): boolean {
+  return (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "::1"
+  );
+}
+
 function resolveSsl(url: URL) {
   const sslMode = (
     url.searchParams.get("ssl-mode") ??
@@ -60,26 +68,34 @@ function buildPool() {
     );
   }
 
-  if (!url.password || url.password === "YOUR_REAL_PASSWORD") {
-    throw new Error(
-      `DATABASE_URL still has a placeholder password ("${url.password || "<empty>"}"). ` +
-      `Copy the real password from Aiven → your service → Overview → ` +
-      `Connection information → "Click to reveal password", percent-encode ` +
-      `any special characters, update DATABASE_URL in Vercel, then redeploy.`,
-    );
+  const local = isLocalHost(url.hostname);
+
+  // Aiven (and any other remote host) must have a real, non-placeholder
+  // password. Local dev databases (e.g. `mysql://root:@localhost:3307/db`)
+  // are commonly configured with no password at all, so we skip this
+  // check when we're clearly talking to a local MySQL instance.
+  if (!local) {
+    if (!url.password || url.password === "YOUR_REAL_PASSWORD") {
+      throw new Error(
+        `DATABASE_URL still has a placeholder password ("${url.password || "<empty>"}"). ` +
+        `Copy the real password from Aiven → your service → Overview → ` +
+        `Connection information → "Click to reveal password", percent-encode ` +
+        `any special characters, update DATABASE_URL in Vercel, then redeploy.`,
+      );
+    }
   }
 
   const ssl = resolveSsl(url);
 
   console.log(
-    `[db] connecting to mysql://${decodeURIComponent(url.username)}@${url.hostname}:${url.port || 3306}/${url.pathname.replace(/^\//, "")} (ssl: ${ssl ? "on" : "off"}, caCert: ${env.databaseCaCert ? "provided" : "missing"})`,
+    `[db] connecting to mysql://${decodeURIComponent(url.username)}@${url.hostname}:${url.port || 3306}/${url.pathname.replace(/^\//, "")} (local: ${local}, ssl: ${ssl ? "on" : "off"}, caCert: ${env.databaseCaCert ? "provided" : "missing"})`,
   );
 
   return mysql.createPool({
     host: url.hostname,
     port: url.port ? Number(url.port) : 3306,
     user: decodeURIComponent(url.username),
-    password: decodeURIComponent(url.password),
+    password: url.password ? decodeURIComponent(url.password) : "",
     database: url.pathname.replace(/^\//, ""),
     ssl,
     // Fail well inside Vercel Hobby's 10s function limit instead of
@@ -87,8 +103,9 @@ function buildPool() {
     // 504 GATEWAY_TIMEOUT / FUNCTION_INVOCATION_TIMEOUT. If this fires,
     // the error will say "connect ETIMEDOUT" — almost always means
     // Aiven's "Allowed IP Addresses" list is blocking Vercel's outbound
-    // traffic, or the DATABASE_URL host/port is wrong.
-    connectTimeout: 4000,
+    // traffic, or the DATABASE_URL host/port is wrong. (Not relevant when
+    // running against localhost.)
+    connectTimeout: local ? 10000 : 4000,
     connectionLimit: 3,
     maxIdle: 3,
     idleTimeout: 30000,
@@ -144,7 +161,9 @@ export async function withTimeout<T>(
             `Aiven's "Allowed IP Addresses" list is blocking Vercel's ` +
             `outbound connections — set it to 0.0.0.0/0 and click ` +
             `"Save changes" in the Aiven console under your service → ` +
-            `Overview → "Allowed IP Addresses".`,
+            `Overview → "Allowed IP Addresses". If you're running locally, ` +
+            `make sure your local MySQL server is running and reachable at ` +
+            `the host/port in DATABASE_URL.`,
           ),
         ),
       ms,
