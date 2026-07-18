@@ -2,17 +2,30 @@ import { z } from "zod";
 import { createRouter, publicQuery, adminQuery } from "./middleware";
 import { getDb } from "./queries/connection";
 import { dishes } from "@db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 const categoryEnum = z.enum(["appetizer", "main", "dessert", "beverage", "breakfast"]);
+const subcategoryEnum = z.enum(["coffee", "tea", "others"]);
 
 export const dishRouter = createRouter({
   list: publicQuery
-    .input(z.object({ category: categoryEnum.optional() }).optional())
+    .input(
+      z
+        .object({
+          category: categoryEnum.optional(),
+          // Only relevant when category === "beverage"; ignored otherwise.
+          subcategory: subcategoryEnum.optional(),
+        })
+        .optional(),
+    )
     .query(async ({ input }) => {
       const db = getDb();
-      if (input?.category) {
-        return db.select().from(dishes).where(eq(dishes.category, input.category));
+      const conditions = [];
+      if (input?.category) conditions.push(eq(dishes.category, input.category));
+      if (input?.subcategory) conditions.push(eq(dishes.subcategory, input.subcategory));
+
+      if (conditions.length > 0) {
+        return db.select().from(dishes).where(and(...conditions));
       }
       return db.select().from(dishes);
     }),
@@ -37,6 +50,7 @@ export const dishRouter = createRouter({
         description: z.string().optional(),
         price: z.string(),
         category: categoryEnum,
+        subcategory: subcategoryEnum.nullable().optional(),
         imageUrl: z.string().optional(),
         featured: z.boolean().optional(),
         stock: z.number().nullable().optional(),
@@ -44,7 +58,13 @@ export const dishRouter = createRouter({
     )
     .mutation(async ({ input }) => {
       const db = getDb();
-      const result = await db.insert(dishes).values(input);
+      const { subcategory, ...rest } = input;
+      // Subcategory only ever applies to beverages — guard against stale
+      // data if a client sends one alongside a non-beverage category.
+      const result = await db.insert(dishes).values({
+        ...rest,
+        subcategory: rest.category === "beverage" ? (subcategory ?? null) : null,
+      });
       return { success: true, id: Number(result[0].insertId) };
     }),
 
@@ -56,15 +76,36 @@ export const dishRouter = createRouter({
         description: z.string().optional(),
         price: z.string().optional(),
         category: categoryEnum.optional(),
+        subcategory: subcategoryEnum.nullable().optional(),
         imageUrl: z.string().optional(),
         featured: z.boolean().optional(),
         stock: z.number().nullable().optional(),
       }),
     )
     .mutation(async ({ input }) => {
-      const { id, ...updates } = input;
+      const { id, category, subcategory, ...updates } = input;
       const db = getDb();
-      await db.update(dishes).set(updates).where(eq(dishes.id, id));
+
+      const touchesSubcategory = category !== undefined || subcategory !== undefined;
+      const nextCategory = category; // undefined = "leave as-is" for the guard below
+
+      await db
+        .update(dishes)
+        .set({
+          ...updates,
+          ...(category !== undefined ? { category } : {}),
+          ...(touchesSubcategory
+            ? {
+              subcategory:
+                nextCategory === "beverage" || (nextCategory === undefined && subcategory !== undefined)
+                  ? (subcategory ?? null)
+                  : nextCategory !== undefined
+                    ? null
+                    : (subcategory ?? null),
+            }
+            : {}),
+        })
+        .where(eq(dishes.id, id));
       return { success: true };
     }),
 

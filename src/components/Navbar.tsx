@@ -1,15 +1,17 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router";
-import { useAuth } from "@/hooks/useAuth";
-import { useCart } from "@/providers/cart";
-import { CartSheet } from "@/components/CartSheet";
+import { useAuth } from "../hooks/useAuth";
+import { useCart } from "../providers/cart";
+import { useLanguage } from "../providers/language";
+import { CartSheet } from "../components/CartSheet";
+import { LanguageSwitcher } from "../components/LanguageSwitcher";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "../components/ui/dropdown-menu";
 import { Menu, X, Sparkles, ShoppingBag, ChevronDown } from "lucide-react";
 
 export default function Navbar() {
@@ -18,6 +20,7 @@ export default function Navbar() {
   const [cartOpen, setCartOpen] = useState(false);
   const { user, logout } = useAuth();
   const { totalItems } = useCart();
+  const { t } = useLanguage();
   const location = useLocation();
 
   const customer = user && user.role !== "admin" ? user : null;
@@ -37,12 +40,12 @@ export default function Navbar() {
   const isHome = location.pathname === "/";
 
   const navLinks = [
-    { label: "HOME", href: "/" },
-    { label: "MENU", href: "/menu" },
-    { label: "RESERVE TABLE", href: "/reserve" },
-    { label: "STORY", href: "/story" },
-    { label: "CONTACT", href: "/contact" },
-  ];
+    { key: "home", href: "/" },
+    { key: "menu", href: "/menu" },
+    { key: "reserve", href: "/reserve" },
+    { key: "story", href: "/story" },
+    { key: "contact", href: "/contact" },
+  ] as const;
 
   return (
     <>
@@ -66,17 +69,19 @@ export default function Navbar() {
           <div className="hidden lg:flex items-center gap-8">
             {navLinks.map((link) => (
               <Link
-                key={link.label}
+                key={link.key}
                 to={link.href}
                 className="relative text-cream/80 text-[13px] font-body font-medium tracking-[0.08em] hover:text-gold-primary transition-colors duration-300 group"
               >
-                {link.label}
+                {t(`nav.${link.key}`)}
                 <span className="absolute -bottom-1 left-1/2 w-0 h-[1px] bg-gold-primary transition-all duration-300 group-hover:w-full group-hover:left-0" />
               </Link>
             ))}
           </div>
 
           <div className="hidden lg:flex items-center gap-4">
+            <LanguageSwitcher />
+
             <button
               onClick={() => setCartOpen(true)}
               className="relative p-2 text-cream/80 hover:text-gold-primary transition-colors"
@@ -105,20 +110,20 @@ export default function Navbar() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuItem asChild>
-                    <Link to="/profile">Profile</Link>
+                    <Link to="/profile">{t("nav.profile")}</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/my-orders">My Orders</Link>
+                    <Link to="/my-orders">{t("nav.myOrders")}</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/my-reservations">My Reservations</Link>
+                    <Link to="/my-reservations">{t("nav.myReservations")}</Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={logout}
                     className="text-destructive focus:text-destructive"
                   >
-                    Logout
+                    {t("nav.logout")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -127,12 +132,13 @@ export default function Navbar() {
                 to="/login"
                 className="px-5 py-2 border border-gold-primary text-gold-primary text-[13px] font-medium tracking-[0.05em] rounded-full hover:bg-gold-primary hover:text-table-dark transition-all duration-300"
               >
-                Sign In
+                {t("nav.signIn")}
               </Link>
             )}
           </div>
 
           <div className="flex lg:hidden items-center gap-2">
+            <LanguageSwitcher />
             <button
               onClick={() => setCartOpen(true)}
               className="relative p-2 text-cream"
@@ -156,29 +162,29 @@ export default function Navbar() {
             <div className="flex flex-col items-center gap-6 py-8">
               {navLinks.map((link) => (
                 <Link
-                  key={link.label}
+                  key={link.key}
                   to={link.href}
                   className="text-cream/80 text-sm font-medium tracking-[0.08em] hover:text-gold-primary transition-colors"
                 >
-                  {link.label}
+                  {t(`nav.${link.key}`)}
                 </Link>
               ))}
               {customer ? (
                 <>
                   <Link to="/profile" className="text-cream/80 text-sm hover:text-gold-primary transition-colors">
-                    Profile
+                    {t("nav.profile")}
                   </Link>
                   <Link to="/my-orders" className="text-cream/80 text-sm hover:text-gold-primary transition-colors">
-                    My Orders
+                    {t("nav.myOrders")}
                   </Link>
                   <Link to="/my-reservations" className="text-cream/80 text-sm hover:text-gold-primary transition-colors">
-                    My Reservations
+                    {t("nav.myReservations")}
                   </Link>
                   <button
                     onClick={logout}
                     className="text-cream/60 text-sm hover:text-gold-primary transition-colors"
                   >
-                    Logout ({customer.name})
+                    {t("nav.logout")} ({customer.name})
                   </button>
                 </>
               ) : (
@@ -186,7 +192,7 @@ export default function Navbar() {
                   to="/reserve"
                   className="px-6 py-2 border border-gold-primary text-gold-primary text-sm rounded-full hover:bg-gold-primary hover:text-table-dark transition-all"
                 >
-                  Reserve a Table
+                  {t("nav.reserve")}
                 </Link>
               )}
             </div>

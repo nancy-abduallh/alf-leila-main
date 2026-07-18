@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600&family=Cairo:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -56,6 +56,20 @@
 
   h1, h2, h3, h4 {
     font-family: 'Playfair Display', serif;
+  }
+
+  /* Arabic mode: swap to a font with proper Arabic glyph coverage and
+     flip layout direction. Headings keep the display font where it
+     already supports Arabic-adjacent latin fallback gracefully. */
+  html[dir="rtl"] body {
+    font-family: 'Cairo', 'Inter', sans-serif;
+  }
+
+  html[dir="rtl"] h1,
+  html[dir="rtl"] h2,
+  html[dir="rtl"] h3,
+  html[dir="rtl"] h4 {
+    font-family: 'Cairo', 'Playfair Display', serif;
   }
 }
 

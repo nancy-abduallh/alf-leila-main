@@ -8,6 +8,13 @@
       "when": 1779392318612,
       "tag": "0000_milky_venus",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1784600000000,
+      "tag": "0001_add_beverage_subcategory",
+      "breakpoints": true
     }
   ]
 }

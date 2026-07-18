@@ -184,6 +184,8 @@ export default function Admin() {
       description: values.description || undefined,
       price: values.price,
       category: values.category,
+      subcategory:
+        values.category === "beverage" && values.subcategory ? values.subcategory : null,
       imageUrl: values.imageUrl || undefined,
       featured: values.featured,
       stock: values.stock === "" ? null : Number(values.stock),
@@ -480,6 +482,7 @@ export default function Admin() {
                       <tr className="border-b border-gold-primary/10">
                         <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Name</th>
                         <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Category</th>
+                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Type</th>
                         <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Price</th>
                         <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Stock</th>
                         <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Featured</th>
@@ -494,6 +497,15 @@ export default function Admin() {
                             <span className="px-2.5 py-1 text-xs capitalize bg-gold-primary/10 text-gold-primary rounded-full">
                               {dish.category}
                             </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            {dish.category === "beverage" && dish.subcategory ? (
+                              <span className="px-2.5 py-1 text-xs capitalize bg-cream/10 text-cream/70 rounded-full">
+                                {dish.subcategory}
+                              </span>
+                            ) : (
+                              <span className="text-cream/30 text-xs">—</span>
+                            )}
                           </td>
                           <td className="px-4 py-3 text-gold-primary text-sm">{dish.price} EGP</td>
                           <td className="px-4 py-3 text-sm">

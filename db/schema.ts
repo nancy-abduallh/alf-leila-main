@@ -32,6 +32,8 @@ export const dishes = mysqlTable("dishes", {
   description: text("description"),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   category: mysqlEnum("category", ["appetizer", "main", "dessert", "beverage", "breakfast"]).notNull(),
+  // Only meaningful when category === "beverage". Null for every other category.
+  subcategory: mysqlEnum("subcategory", ["coffee", "tea", "others"]),
   imageUrl: varchar("imageUrl", { length: 255 }),
   featured: boolean("featured").default(false),
   stock: int("stock"), // null = unlimited

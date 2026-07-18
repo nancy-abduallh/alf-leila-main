@@ -1,29 +1,35 @@
 import { useState, useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { trpc } from "@/providers/trpc";
-import { useCart } from "@/providers/cart";
+import { trpc } from "../providers/trpc";
+import { useCart } from "../providers/cart";
+import { useLanguage } from "../providers/language";
 import { Search, SlidersHorizontal, Plus, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 gsap.registerPlugin(ScrollTrigger);
 
 type Category = "all" | "appetizer" | "main" | "dessert" | "beverage" | "breakfast";
+type Subcategory = "all" | "coffee" | "tea" | "others";
 
-const categories: { label: string; value: Category }[] = [
-  { label: "All", value: "all" },
-  { label: "Main Courses", value: "main" },
-  { label: "Appetizers", value: "appetizer" },
-  { label: "Desserts", value: "dessert" },
-  { label: "Beverages", value: "beverage" },
-  { label: "Breakfast", value: "breakfast" },
-];
+const categoryOrder: Category[] = ["all", "main", "appetizer", "dessert", "beverage", "breakfast"];
+const subcategoryOrder: Subcategory[] = ["all", "coffee", "tea", "others"];
 
 export default function Menu() {
   const [activeCategory, setActiveCategory] = useState<Category>("all");
+  const [activeSubcategory, setActiveSubcategory] = useState<Subcategory>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const sectionRef = useRef<HTMLDivElement>(null);
   const { addItem } = useCart();
+  const { t } = useLanguage();
+
+  // Subcategory filter only makes sense inside Beverages; reset it whenever
+  // the person leaves that category so it doesn't silently stay applied.
+  useEffect(() => {
+    if (activeCategory !== "beverage") {
+      setActiveSubcategory("all");
+    }
+  }, [activeCategory]);
 
   const {
     data: allDishes,
@@ -31,7 +37,14 @@ export default function Menu() {
     isError,
     error,
   } = trpc.dish.list.useQuery(
-    activeCategory !== "all" ? { category: activeCategory } : undefined,
+    activeCategory !== "all"
+      ? {
+        category: activeCategory,
+        ...(activeCategory === "beverage" && activeSubcategory !== "all"
+          ? { subcategory: activeSubcategory }
+          : {}),
+      }
+      : undefined,
   );
 
   const filteredDishes = allDishes?.filter((d) =>
@@ -72,7 +85,7 @@ export default function Menu() {
       price: dish.price,
       imageUrl: dish.imageUrl,
     });
-    toast.success(`${dish.name} added to cart`);
+    toast.success(`${dish.name} ${t("menu.addedToCart")}`);
   };
 
   return (
@@ -86,26 +99,26 @@ export default function Menu() {
         <div className="absolute inset-0 bg-gradient-to-b from-[#0A0A0F]/70 via-[#0A0A0F]/50 to-[#0A0A0F]" />
         <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-6">
           <p className="font-heading text-gold-primary text-sm tracking-[0.2em] mb-3" style={{ fontStyle: "italic" }}>
-            DISCOVER
+            {t("menu.eyebrow")}
           </p>
-          <h1 className="font-display text-cream text-[clamp(2.5rem,5vw,4rem)]">Our Menu</h1>
+          <h1 className="font-display text-cream text-[clamp(2.5rem,5vw,4rem)]">{t("menu.title")}</h1>
           <div className="w-16 h-[1px] bg-gold-primary mt-4" />
         </div>
       </div>
 
       <div ref={sectionRef} className="max-w-[1400px] mx-auto px-6 lg:px-12 py-16 lg:py-24">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0">
-            {categories.map((cat) => (
+            {categoryOrder.map((cat) => (
               <button
-                key={cat.value}
-                onClick={() => setActiveCategory(cat.value)}
-                className={`px-4 py-2 text-sm font-medium tracking-[0.05em] rounded-full whitespace-nowrap transition-all duration-300 ${activeCategory === cat.value
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={`px-4 py-2 text-sm font-medium tracking-[0.05em] rounded-full whitespace-nowrap transition-all duration-300 ${activeCategory === cat
                   ? "bg-gold-primary text-table-dark"
                   : "border border-gold-primary/30 text-cream/70 hover:border-gold-primary hover:text-gold-primary"
                   }`}
               >
-                {cat.label}
+                {t(`menu.categories.${cat}`)}
               </button>
             ))}
           </div>
@@ -113,13 +126,32 @@ export default function Menu() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-cream/40" />
             <input
               type="text"
-              placeholder="Search dishes..."
+              placeholder={t("menu.searchPlaceholder")}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-table-mid border border-gold-primary/20 rounded-lg text-cream text-sm placeholder:text-cream/30 focus:outline-none focus:border-gold-primary transition-colors"
             />
           </div>
         </div>
+
+        {activeCategory === "beverage" && (
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-10 -mt-2">
+            {subcategoryOrder.map((sub) => (
+              <button
+                key={sub}
+                onClick={() => setActiveSubcategory(sub)}
+                className={`px-3.5 py-1.5 text-xs font-medium tracking-[0.05em] rounded-full whitespace-nowrap transition-all duration-300 ${activeSubcategory === sub
+                  ? "bg-gold-primary/20 text-gold-primary border border-gold-primary"
+                  : "border border-gold-primary/15 text-cream/50 hover:border-gold-primary/50 hover:text-cream/80"
+                  }`}
+              >
+                {t(`menu.subcategories.${sub}`)}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {!(activeCategory === "beverage") && <div className="mb-10" />}
 
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -130,14 +162,11 @@ export default function Menu() {
         ) : isError ? (
           <div className="text-center py-20 max-w-lg mx-auto">
             <AlertTriangle className="w-10 h-10 text-red-400/70 mx-auto mb-4" />
-            <p className="text-cream/70 text-lg">Couldn&apos;t load the menu.</p>
+            <p className="text-cream/70 text-lg">{t("menu.couldNotLoad")}</p>
             <p className="text-cream/40 text-sm mt-2 break-words">
               {error?.message || "Unknown error contacting the server."}
             </p>
-            <p className="text-cream/30 text-xs mt-4">
-              If this mentions a database issue, check the DATABASE_URL
-              environment variable and visit /api/health for details.
-            </p>
+            <p className="text-cream/30 text-xs mt-4">{t("menu.healthCheckHint")}</p>
           </div>
         ) : filteredDishes && filteredDishes.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -170,10 +199,17 @@ export default function Menu() {
                     <p className="text-cream/50 text-sm leading-relaxed mb-4">
                       {dish.description}
                     </p>
-                    <div className="flex items-center justify-between">
-                      <span className="px-3 py-1 text-xs text-gold-primary/70 border border-gold-primary/20 rounded-full capitalize">
-                        {dish.category}
-                      </span>
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5">
+                        <span className="px-3 py-1 text-xs text-gold-primary/70 border border-gold-primary/20 rounded-full capitalize">
+                          {t(`menu.categories.${dish.category}`)}
+                        </span>
+                        {dish.category === "beverage" && dish.subcategory && (
+                          <span className="px-3 py-1 text-xs text-cream/60 border border-cream/15 rounded-full">
+                            {t(`menu.subcategories.${dish.subcategory}`)}
+                          </span>
+                        )}
+                      </div>
                       <button
                         onClick={() => handleAddToCart(dish)}
                         disabled={outOfStock}
@@ -183,7 +219,7 @@ export default function Menu() {
                           }`}
                       >
                         <Plus className="w-3.5 h-3.5" />
-                        {outOfStock ? "Out of stock" : "Add"}
+                        {outOfStock ? t("menu.outOfStock") : t("menu.add")}
                       </button>
                     </div>
                   </div>
@@ -194,8 +230,8 @@ export default function Menu() {
         ) : (
           <div className="text-center py-20">
             <SlidersHorizontal className="w-10 h-10 text-gold-primary/30 mx-auto mb-4" />
-            <p className="text-cream/50 text-lg">No dishes found.</p>
-            <p className="text-cream/30 text-sm mt-1">Try adjusting your filters.</p>
+            <p className="text-cream/50 text-lg">{t("menu.noResults")}</p>
+            <p className="text-cream/30 text-sm mt-1">{t("menu.adjustFilters")}</p>
           </div>
         )}
       </div>

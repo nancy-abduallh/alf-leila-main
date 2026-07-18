@@ -1,7 +1,10 @@
 import { Link } from "react-router";
 import { Sparkles, Instagram, Facebook } from "lucide-react";
+import { useLanguage } from "../providers/language";
 
 export default function Footer() {
+  const { t } = useLanguage();
+
   return (
     <footer className="bg-table-dark border-t border-gold-primary/10">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12 py-16 lg:py-20">
@@ -17,13 +20,13 @@ export default function Footer() {
               </span>
             </div>
             <p className="text-cream/50 text-sm leading-relaxed">
-              A thousand and one nights of flavor. Experience the magic of authentic Egyptian cuisine in the heart of Cairo.
+              {t("footer.tagline")}
             </p>
           </div>
 
           <div>
             <h4 className="font-heading text-gold-primary text-sm tracking-[0.1em] mb-4">
-              Quick Links
+              {t("footer.quickLinks")}
             </h4>
             <div className="flex flex-col gap-2.5">
               {["Menu", "Reservations", "Private Events", "Gift Cards", "Careers"].map(
@@ -42,7 +45,7 @@ export default function Footer() {
 
           <div>
             <h4 className="font-heading text-gold-primary text-sm tracking-[0.1em] mb-4">
-              Hours
+              {t("footer.hours")}
             </h4>
             <div className="flex flex-col gap-2.5 text-cream/50 text-sm">
               <p>Sunday – Thursday: 12PM – 11PM</p>
@@ -52,7 +55,7 @@ export default function Footer() {
 
           <div>
             <h4 className="font-heading text-gold-primary text-sm tracking-[0.1em] mb-4">
-              Contact
+              {t("footer.contact")}
             </h4>
             <div className="flex flex-col gap-2.5 text-cream/50 text-sm">
               <p>12 Talaat Harb St, Downtown Cairo</p>
@@ -73,8 +76,8 @@ export default function Footer() {
                 Developed with{" "}
                 <span className="text-red-500">&#10084;</span>{" "}
                 by{" "}
-                <a
-                  href="https://nancy-abduallh-portfolio.vercel.app/"
+
+                <a href="https://nancy-abduallh-portfolio.vercel.app/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-cream hover:text-gold transition-colors duration-300 hover:underline underline-offset-4"
@@ -89,23 +92,23 @@ export default function Footer() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <a
-              href="#"
+
+            <a href="#"
               className="text-gold-dark hover:text-gold-primary transition-colors duration-300"
               onClick={(e) => e.preventDefault()}
             >
               <Instagram className="w-5 h-5" />
             </a>
-            <a
-              href="#"
+
+            <a href="#"
               className="text-gold-dark hover:text-gold-primary transition-colors duration-300"
               onClick={(e) => e.preventDefault()}
             >
               <Facebook className="w-5 h-5" />
             </a>
           </div>
-        </div>
-      </div>
+        </div >
+      </div >
     </footer >
   );
 }

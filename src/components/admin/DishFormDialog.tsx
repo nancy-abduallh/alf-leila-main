@@ -6,26 +6,27 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
+} from "../ui/dialog";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Textarea } from "../ui/textarea";
+import { Checkbox } from "../ui/checkbox";
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from "@/components/ui/select";
-import type { Dish } from "@db/schema";
+} from "../ui/select";
+import type { Dish } from "@/db/schema";
 
 export type DishFormValues = {
     name: string;
     description: string;
     price: string;
     category: "appetizer" | "main" | "dessert" | "beverage" | "breakfast";
+    subcategory: "coffee" | "tea" | "others" | "";
     imageUrl: string;
     featured: boolean;
     stock: string; // empty string = unlimited
@@ -36,6 +37,7 @@ const emptyForm: DishFormValues = {
     description: "",
     price: "",
     category: "main",
+    subcategory: "",
     imageUrl: "",
     featured: false,
     stock: "",
@@ -67,6 +69,7 @@ export function DishFormDialog({
                         description: dish.description ?? "",
                         price: dish.price,
                         category: dish.category,
+                        subcategory: dish.subcategory ?? "",
                         imageUrl: dish.imageUrl ?? "",
                         featured: !!dish.featured,
                         stock: dish.stock === null || dish.stock === undefined ? "" : String(dish.stock),
@@ -135,7 +138,13 @@ export function DishFormDialog({
                             <Select
                                 value={values.category}
                                 onValueChange={(val) =>
-                                    setValues((v) => ({ ...v, category: val as DishFormValues["category"] }))
+                                    setValues((v) => ({
+                                        ...v,
+                                        category: val as DishFormValues["category"],
+                                        // Subcategory only applies to beverages — clear it
+                                        // whenever the category changes away from that.
+                                        subcategory: val === "beverage" ? v.subcategory : "",
+                                    }))
                                 }
                             >
                                 <SelectTrigger className="w-full">
@@ -151,6 +160,32 @@ export function DishFormDialog({
                             </Select>
                         </div>
                     </div>
+
+                    {values.category === "beverage" && (
+                        <div className="space-y-2">
+                            <Label>Beverage Type</Label>
+                            <Select
+                                value={values.subcategory || "none"}
+                                onValueChange={(val) =>
+                                    setValues((v) => ({
+                                        ...v,
+                                        subcategory:
+                                            val === "none" ? "" : (val as DishFormValues["subcategory"]),
+                                    }))
+                                }
+                            >
+                                <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Select type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">None</SelectItem>
+                                    <SelectItem value="coffee">Coffee</SelectItem>
+                                    <SelectItem value="tea">Tea</SelectItem>
+                                    <SelectItem value="others">Others</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
 
                     <div className="space-y-2">
                         <Label htmlFor="dish-image">Image URL</Label>
