@@ -1,4 +1,5 @@
-import { trpc } from "@/providers/trpc";
+import { trpc } from "../providers/trpc";
+import { useLanguage } from "../providers/language";
 import { Package } from "lucide-react";
 
 const statusColors: Record<string, string> = {
@@ -12,11 +13,12 @@ const statusColors: Record<string, string> = {
 
 export default function MyOrders() {
     const { data: orders, isLoading } = trpc.order.myOrders.useQuery();
+    const { t } = useLanguage();
 
     return (
         <main className="bg-table-dark min-h-screen pt-[72px]">
             <div className="max-w-[900px] mx-auto px-6 py-16">
-                <h1 className="font-display text-cream text-2xl mb-8">My Orders</h1>
+                <h1 className="font-display text-cream text-2xl mb-8">{t("myOrders.title")}</h1>
 
                 {isLoading ? (
                     <div className="space-y-4">
@@ -31,7 +33,7 @@ export default function MyOrders() {
                                 <div className="flex items-center justify-between mb-3">
                                     <p className="text-cream font-medium">Order #{order.id}</p>
                                     <span className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${statusColors[order.status]}`}>
-                                        {order.status}
+                                        {t(`statuses.${order.status}`)}
                                     </span>
                                 </div>
                                 <div className="space-y-1 mb-3">
@@ -53,7 +55,7 @@ export default function MyOrders() {
                 ) : (
                     <div className="text-center py-20">
                         <Package className="w-10 h-10 text-gold-primary/30 mx-auto mb-4" />
-                        <p className="text-cream/50">No orders yet.</p>
+                        <p className="text-cream/50">{t("myOrders.noOrders")}</p>
                     </div>
                 )}
             </div>

@@ -2,51 +2,26 @@ import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Clock, MapPin, Award, Users } from "lucide-react";
+import { useLanguage } from "../providers/language";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const timelineEvents = [
-  {
-    year: "1987",
-    title: "The Beginning",
-    description:
-      "Alf Leila wa Leila opened its doors on a quiet corner of Talaat Harb Street. Founded by Chef Hassan El-Masry, the restaurant began as a modest 12-table establishment serving traditional family recipes.",
-  },
-  {
-    year: "1995",
-    title: "A Growing Reputation",
-    description:
-      "After being featured in Cairo's top food guide, the restaurant expanded to accommodate 50 guests. Chef Hassan introduced his signature Molokhia Royale, which remains our most celebrated dish.",
-  },
-  {
-    year: "2008",
-    title: "The New Generation",
-    description:
-      "Chef Amira El-Masry, Hassan's daughter, returned from Le Cordon Bleu Paris to join the kitchen. She brought modern techniques while honoring the traditional flavors that made Alf Leila famous.",
-  },
-  {
-    year: "2019",
-    title: "Renovation & Revival",
-    description:
-      "A complete renovation transformed the space into the atmospheric dining room guests experience today — inspired by the palaces of old Cairo, with brass lanterns and intricate geometric patterns.",
-  },
-  {
-    year: "2024",
-    title: "Looking Forward",
-    description:
-      "Today, Alf Leila wa Leila continues to be Cairo's premier destination for authentic Egyptian cuisine, welcoming guests from around the world to experience a thousand and one nights of flavor.",
-  },
-];
-
-const stats = [
-  { icon: Clock, label: "Years of Excellence", value: "37+" },
-  { icon: Users, label: "Happy Guests", value: "500K+" },
-  { icon: Award, label: "Awards Won", value: "28" },
-  { icon: MapPin, label: "Location", value: "Downtown" },
-];
-
 export default function Story() {
   const sectionRef = useRef<HTMLDivElement>(null);
+  const { t } = useLanguage();
+
+  const timelineEvents = t("story.timeline") as unknown as {
+    year: string;
+    title: string;
+    description: string;
+  }[];
+
+  const stats = [
+    { icon: Clock, label: t("story.statYears"), value: "37+" },
+    { icon: Users, label: t("story.statGuests"), value: "500K+" },
+    { icon: Award, label: t("story.statAwards"), value: "28" },
+    { icon: MapPin, label: t("story.statLocation"), value: t("story.locationValue") },
+  ];
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -106,10 +81,10 @@ export default function Story() {
         <div className="absolute inset-0 bg-gradient-to-b from-[#0A0A0F]/70 via-[#0A0A0F]/50 to-[#0A0A0F]" />
         <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-6">
           <p className="font-heading text-gold-primary text-sm tracking-[0.2em] mb-3" style={{ fontStyle: "italic" }}>
-            OUR JOURNEY
+            {t("story.eyebrow")}
           </p>
           <h1 className="font-display text-cream text-[clamp(2.5rem,5vw,4rem)]">
-            Our Story
+            {t("story.title")}
           </h1>
           <div className="w-16 h-[1px] bg-gold-primary mt-4" />
         </div>
@@ -119,12 +94,10 @@ export default function Story() {
         {/* Intro */}
         <div className="max-w-3xl mx-auto text-center mb-20">
           <h2 className="story-reveal font-display text-cream text-[clamp(1.5rem,3vw,2.2rem)] mb-6">
-            A Legacy of Flavor Since 1987
+            {t("story.introTitle")}
           </h2>
           <p className="story-reveal text-cream/60 text-base leading-relaxed">
-            For over three decades, Alf Leila wa Leila has been more than a restaurant —
-            it has been a guardian of Egyptian culinary heritage. Our story is one of family,
-            tradition, and an unwavering commitment to the art of Egyptian hospitality.
+            {t("story.introText")}
           </p>
         </div>
 
@@ -182,21 +155,16 @@ export default function Story() {
           </div>
           <div>
             <p className="font-heading text-gold-primary text-sm tracking-[0.15em] mb-3" style={{ fontStyle: "italic" }}>
-              PHILOSOPHY
+              {t("story.philosophyLabel")}
             </p>
             <h3 className="font-display text-cream text-2xl lg:text-3xl mb-4">
-              Honoring Tradition, Embracing Innovation
+              {t("story.philosophyTitle")}
             </h3>
             <p className="text-cream/60 text-sm leading-relaxed mb-4">
-              At Alf Leila wa Leila, we believe that the best Egyptian cuisine comes from
-              understanding the past while fearlessly exploring the future. Our chefs spend
-              years mastering traditional techniques before they are encouraged to innovate.
+              {t("story.philosophyText1")}
             </p>
             <p className="text-cream/60 text-sm leading-relaxed">
-              Every ingredient is carefully sourced — from the molokhia leaves picked at
-              dawn in the Nile Delta to the spices ground fresh in our kitchen. This
-              dedication to quality is what has made us Cairo&apos;s most beloved restaurant
-              for over three decades.
+              {t("story.philosophyText2")}
             </p>
           </div>
         </div>

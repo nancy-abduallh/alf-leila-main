@@ -1,9 +1,11 @@
-import { useAuth } from "@/hooks/useAuth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "../hooks/useAuth";
+import { useLanguage } from "../providers/language";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { User, Mail, Shield } from "lucide-react";
 
 export default function Profile() {
     const { user, isLoading } = useAuth();
+    const { t } = useLanguage();
 
     if (isLoading) {
         return (
@@ -18,30 +20,30 @@ export default function Profile() {
     return (
         <main className="bg-table-dark min-h-screen pt-[72px]">
             <div className="max-w-[600px] mx-auto px-6 py-16">
-                <h1 className="font-display text-cream text-2xl mb-8">My Profile</h1>
+                <h1 className="font-display text-cream text-2xl mb-8">{t("profile.title")}</h1>
                 <Card>
                     <CardHeader>
-                        <CardTitle>Account Details</CardTitle>
+                        <CardTitle>{t("profile.accountDetails")}</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="flex items-center gap-3">
                             <User className="w-4 h-4 text-gold-primary" />
                             <div>
-                                <p className="text-xs text-muted-foreground">Name</p>
+                                <p className="text-xs text-muted-foreground">{t("profile.name")}</p>
                                 <p className="text-sm">{user.name}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
                             <Mail className="w-4 h-4 text-gold-primary" />
                             <div>
-                                <p className="text-xs text-muted-foreground">Email</p>
+                                <p className="text-xs text-muted-foreground">{t("profile.email")}</p>
                                 <p className="text-sm">{user.email}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
                             <Shield className="w-4 h-4 text-gold-primary" />
                             <div>
-                                <p className="text-xs text-muted-foreground">Member since</p>
+                                <p className="text-xs text-muted-foreground">{t("profile.memberSince")}</p>
                                 <p className="text-sm">{new Date(user.createdAt).toLocaleDateString()}</p>
                             </div>
                         </div>

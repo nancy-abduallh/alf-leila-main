@@ -3,11 +3,13 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Link } from "react-router";
 import { ArrowRight } from "lucide-react";
+import { useLanguage } from "../providers/language";
 
 gsap.registerPlugin(ScrollTrigger);
 
 export default function IntroSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
+  const { t } = useLanguage();
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -64,28 +66,24 @@ export default function IntroSection() {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-16 items-center">
           <div className="lg:col-span-2">
             <p className="left-reveal font-heading text-gold-primary text-sm tracking-[0.15em] mb-4" style={{ fontStyle: "italic" }}>
-              SINCE 1987
+              {t("intro.eyebrow")}
             </p>
             <h2 className="left-reveal font-display text-cream text-[clamp(1.8rem,3vw,2.8rem)] leading-tight mb-6">
-              Where Every Night is a Thousand and One
+              {t("intro.title")}
             </h2>
             <div className="left-reveal space-y-4 mb-8">
               <p className="text-cream/60 leading-relaxed">
-                Step into Alf Leila wa Leila and leave Cairo behind. For over three decades, 
-                we have been the city&apos;s hidden gem — a place where ancient Egyptian recipes 
-                meet modern culinary artistry.
+                {t("intro.paragraph1")}
               </p>
               <p className="text-cream/60 leading-relaxed">
-                Our chefs source spices from the same markets that once supplied the pharaohs&apos; 
-                kitchens. Each dish tells a story of heritage, passion, and the timeless art of 
-                Egyptian hospitality.
+                {t("intro.paragraph2")}
               </p>
             </div>
             <Link
               to="/menu"
               className="left-reveal inline-flex items-center gap-2 text-gold-primary text-sm font-medium tracking-[0.05em] group"
             >
-              Explore Our Menu
+              {t("intro.cta")}
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
               <span className="absolute bottom-0 left-0 w-0 h-[1px] bg-gold-primary transition-all duration-300 group-hover:w-full" />
             </Link>

@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { trpc } from "@/providers/trpc";
-import { useAuth } from "@/hooks/useAuth";
+import { trpc } from "../providers/trpc";
+import { useAuth } from "../hooks/useAuth";
+import { useLanguage } from "../providers/language";
 import { Calendar, Clock, Users, Phone, MessageSquare, CheckCircle } from "lucide-react";
 
 export default function Reserve() {
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   const [formData, setFormData] = useState({
     phone: "",
@@ -45,22 +47,22 @@ export default function Reserve() {
     return (
       <main className="bg-table-dark min-h-screen pt-[72px] flex items-center justify-center px-6">
         <div className="text-center max-w-sm">
-          <h1 className="font-display text-cream text-2xl mb-3">Sign in to reserve</h1>
+          <h1 className="font-display text-cream text-2xl mb-3">{t("reservePage.signInTitle")}</h1>
           <p className="text-cream/50 text-sm mb-6">
-            Please sign in or create an account to book a table.
+            {t("reservePage.signInDesc")}
           </p>
           <div className="flex items-center justify-center gap-3">
             <button
               onClick={() => navigate("/login")}
               className="px-6 py-2.5 bg-gold-primary text-table-dark text-sm font-medium rounded-full hover:bg-cream transition-colors"
             >
-              Sign In
+              {t("reservePage.signIn")}
             </button>
             <button
               onClick={() => navigate("/register")}
               className="px-6 py-2.5 border border-gold-primary text-gold-primary text-sm font-medium rounded-full hover:bg-gold-primary hover:text-table-dark transition-colors"
             >
-              Create Account
+              {t("reservePage.createAccount")}
             </button>
           </div>
         </div>
@@ -82,10 +84,10 @@ export default function Reserve() {
             className="font-heading text-gold-primary text-sm tracking-[0.2em] mb-3"
             style={{ fontStyle: "italic" }}
           >
-            BOOK YOUR TABLE
+            {t("reservePage.eyebrow")}
           </p>
           <h1 className="font-display text-cream text-[clamp(2rem,4vw,3.5rem)]">
-            Reserve Your Experience
+            {t("reservePage.title")}
           </h1>
         </div>
       </div>
@@ -94,12 +96,12 @@ export default function Reserve() {
         {submitted ? (
           <div className="text-center py-16">
             <CheckCircle className="w-16 h-16 text-gold-primary mx-auto mb-6" />
-            <h2 className="font-display text-cream text-2xl mb-3">Reservation Confirmed</h2>
+            <h2 className="font-display text-cream text-2xl mb-3">{t("reservePage.confirmedTitle")}</h2>
             <p className="text-cream/60 text-base mb-2">
-              Thank you, {user.name}! Your reservation has been received.
+              {t("reservePage.confirmedMessage").replace("{name}", user.name || "")}
             </p>
             <p className="text-cream/40 text-sm">
-              We will send a confirmation to {user.email} shortly.
+              {t("reservePage.confirmedEmail").replace("{email}", user.email)}
             </p>
           </div>
         ) : (
@@ -108,7 +110,7 @@ export default function Reserve() {
               <div>
                 <label className="flex items-center gap-2 text-cream/70 text-sm mb-2">
                   <Phone className="w-4 h-4 text-gold-primary" />
-                  Phone
+                  {t("reservePage.phone")}
                 </label>
                 <input
                   type="tel"
@@ -116,13 +118,13 @@ export default function Reserve() {
                   value={formData.phone}
                   onChange={handleChange}
                   className="w-full px-4 py-3 bg-table-mid border border-gold-primary/20 rounded-lg text-cream text-sm placeholder:text-cream/30 focus:outline-none focus:border-gold-primary transition-colors"
-                  placeholder="+20 1XX XXX XXXX"
+                  placeholder={t("reservePage.phonePlaceholder")}
                 />
               </div>
               <div>
                 <label className="flex items-center gap-2 text-cream/70 text-sm mb-2">
                   <Users className="w-4 h-4 text-gold-primary" />
-                  Number of Guests *
+                  {t("reservePage.guestsLabel")}
                 </label>
                 <select
                   name="guests"
@@ -132,7 +134,7 @@ export default function Reserve() {
                 >
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                     <option key={n} value={n} className="bg-table-mid">
-                      {n} {n === 1 ? "Guest" : "Guests"}
+                      {n} {n === 1 ? t("reservePage.guest") : t("reservePage.guests")}
                     </option>
                   ))}
                 </select>
@@ -143,7 +145,7 @@ export default function Reserve() {
               <div>
                 <label className="flex items-center gap-2 text-cream/70 text-sm mb-2">
                   <Calendar className="w-4 h-4 text-gold-primary" />
-                  Date *
+                  {t("reservePage.dateLabel")}
                 </label>
                 <input
                   type="date"
@@ -158,7 +160,7 @@ export default function Reserve() {
               <div>
                 <label className="flex items-center gap-2 text-cream/70 text-sm mb-2">
                   <Clock className="w-4 h-4 text-gold-primary" />
-                  Time *
+                  {t("reservePage.timeLabel")}
                 </label>
                 <select
                   name="time"
@@ -168,14 +170,14 @@ export default function Reserve() {
                   className="w-full px-4 py-3 bg-table-mid border border-gold-primary/20 rounded-lg text-cream text-sm focus:outline-none focus:border-gold-primary transition-colors"
                 >
                   <option value="" className="bg-table-mid">
-                    Select time
+                    {t("reservePage.selectTime")}
                   </option>
                   {[
                     "12:00", "12:30", "13:00", "13:30", "14:00", "14:30",
                     "18:00", "18:30", "19:00", "19:30", "20:00", "20:30", "21:00", "21:30",
-                  ].map((t) => (
-                    <option key={t} value={t} className="bg-table-mid">
-                      {t}
+                  ].map((time) => (
+                    <option key={time} value={time} className="bg-table-mid">
+                      {time}
                     </option>
                   ))}
                 </select>
@@ -185,7 +187,7 @@ export default function Reserve() {
             <div>
               <label className="flex items-center gap-2 text-cream/70 text-sm mb-2">
                 <MessageSquare className="w-4 h-4 text-gold-primary" />
-                Special Requests
+                {t("reservePage.notesLabel")}
               </label>
               <textarea
                 name="notes"
@@ -193,7 +195,7 @@ export default function Reserve() {
                 value={formData.notes}
                 onChange={handleChange}
                 className="w-full px-4 py-3 bg-table-mid border border-gold-primary/20 rounded-lg text-cream text-sm placeholder:text-cream/30 focus:outline-none focus:border-gold-primary transition-colors resize-none"
-                placeholder="Any dietary restrictions, special occasions, or seating preferences..."
+                placeholder={t("reservePage.notesPlaceholder")}
               />
             </div>
 
@@ -202,7 +204,7 @@ export default function Reserve() {
               disabled={createReservation.isPending}
               className="w-full py-4 bg-gold-primary text-table-dark font-medium text-sm tracking-[0.05em] rounded-full hover:bg-cream hover:shadow-gold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {createReservation.isPending ? "Submitting..." : "Confirm Reservation"}
+              {createReservation.isPending ? t("reservePage.submitting") : t("reservePage.confirm")}
             </button>
           </form>
         )}

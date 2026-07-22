@@ -3,6 +3,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Link } from "react-router";
 import { ArrowRight } from "lucide-react";
+import { useLanguage } from "../providers/language";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -10,6 +11,7 @@ export default function HeroVideoSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const { t } = useLanguage();
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -67,22 +69,20 @@ export default function HeroVideoSection() {
           className="reveal-item font-heading text-gold-primary text-sm tracking-[0.2em] mb-4"
           style={{ fontStyle: "italic" }}
         >
-          SINCE 1987
+          {t("hero.eyebrow")}
         </p>
         <h1 className="reveal-item font-display text-cream text-[clamp(2.5rem,7vw,6rem)] leading-none tracking-[-0.02em] max-w-4xl">
-          Where Every Night is a
-          <span className="gold-shimmer block mt-2">Thousand and One</span>
+          {t("hero.titleLine1")}
+          <span className="gold-shimmer block mt-2">{t("hero.titleHighlight")}</span>
         </h1>
         <p className="reveal-item text-cream/60 text-base lg:text-lg max-w-xl mt-6 leading-relaxed font-body">
-          Step into Alf Leila wa Leila and leave Cairo behind. For over three decades,
-          we have been the city&apos;s hidden gem — where ancient Egyptian recipes meet
-          modern culinary artistry.
+          {t("hero.description")}
         </p>
         <Link
           to="/menu"
           className="reveal-item mt-8 px-8 py-3 bg-gold-primary text-table-dark font-medium text-sm tracking-[0.05em] rounded-full hover:bg-cream hover:shadow-gold transition-all duration-300 inline-flex items-center gap-2"
         >
-          Explore Our Menu
+          {t("hero.cta")}
           <ArrowRight className="w-4 h-4" />
         </Link>
       </div>

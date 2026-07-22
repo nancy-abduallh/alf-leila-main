@@ -5,6 +5,14 @@ import { useLanguage } from "../providers/language";
 export default function Footer() {
   const { t } = useLanguage();
 
+  const quickLinks = [
+    { label: t("footer.links.menu"), to: "/menu" },
+    { label: t("footer.links.reservations"), to: "/reserve" },
+    { label: t("footer.links.privateEvents"), to: "/" },
+    { label: t("footer.links.giftCards"), to: "/" },
+    { label: t("footer.links.careers"), to: "/" },
+  ];
+
   return (
     <footer className="bg-table-dark border-t border-gold-primary/10">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12 py-16 lg:py-20">
@@ -29,17 +37,15 @@ export default function Footer() {
               {t("footer.quickLinks")}
             </h4>
             <div className="flex flex-col gap-2.5">
-              {["Menu", "Reservations", "Private Events", "Gift Cards", "Careers"].map(
-                (link) => (
-                  <Link
-                    key={link}
-                    to={link === "Menu" ? "/menu" : link === "Reservations" ? "/reserve" : "/"}
-                    className="text-cream/50 text-sm hover:text-gold-primary transition-colors duration-300"
-                  >
-                    {link}
-                  </Link>
-                )
-              )}
+              {quickLinks.map((link) => (
+                <Link
+                  key={link.label}
+                  to={link.to}
+                  className="text-cream/50 text-sm hover:text-gold-primary transition-colors duration-300"
+                >
+                  {link.label}
+                </Link>
+              ))}
             </div>
           </div>
 
@@ -48,8 +54,8 @@ export default function Footer() {
               {t("footer.hours")}
             </h4>
             <div className="flex flex-col gap-2.5 text-cream/50 text-sm">
-              <p>Sunday – Thursday: 12PM – 11PM</p>
-              <p>Friday – Saturday: 1PM – 12AM</p>
+              <p>{t("footer.hoursSunThu")}</p>
+              <p>{t("footer.hoursFriSat")}</p>
             </div>
           </div>
 
@@ -58,9 +64,9 @@ export default function Footer() {
               {t("footer.contact")}
             </h4>
             <div className="flex flex-col gap-2.5 text-cream/50 text-sm">
-              <p>12 Talaat Harb St, Downtown Cairo</p>
-              <p>+20 2 2574 8932</p>
-              <p>hello@alfleila.com</p>
+              <p>{t("footer.address")}</p>
+              <p>{t("footer.phone")}</p>
+              <p>{t("footer.email")}</p>
             </div>
           </div>
         </div>
@@ -69,13 +75,13 @@ export default function Footer() {
           <div className="mt-12 pt-8 border-t border-gold-primary/10 flex items-center justify-between">
             <div className="flex flex-col gap-2">
               <p className="text-cream/30 text-xs">
-                &copy; 2026 Alf Leila wa Leila. All rights reserved.
+                {t("footer.copyright")}
               </p>
 
               <p className="text-cream/30 text-xs">
-                Developed with{" "}
+                {t("footer.developedWith")}{" "}
                 <span className="text-red-500">&#10084;</span>{" "}
-                by{" "}
+                {t("footer.by")}{" "}
 
                 <a href="https://nancy-abduallh-portfolio.vercel.app/"
                   target="_blank"

@@ -2,12 +2,14 @@ import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Link } from "react-router";
+import { useLanguage } from "../providers/language";
 
 gsap.registerPlugin(ScrollTrigger);
 
 export default function ExperienceSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const bgRef = useRef<HTMLDivElement>(null);
+  const { t } = useLanguage();
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -66,17 +68,16 @@ export default function ExperienceSection() {
 
       <div className="relative z-10 text-center px-6 max-w-2xl mx-auto py-24">
         <h2 className="exp-reveal font-display text-cream text-[clamp(2rem,5vw,4rem)] leading-none mb-6">
-          Dine Like Royalty
+          {t("experience.title")}
         </h2>
         <p className="exp-reveal text-cream/60 text-base lg:text-lg leading-relaxed mb-8">
-          Every table is a stage. Every meal, a performance. Experience the magic 
-          of Egyptian hospitality in a setting inspired by the palaces of old Cairo.
+          {t("experience.description")}
         </p>
         <Link
           to="/reserve"
           className="exp-reveal inline-flex items-center gap-2 px-8 py-3 bg-gold-primary text-table-dark font-medium text-sm tracking-[0.05em] rounded-full hover:bg-cream hover:shadow-gold transition-all duration-300"
         >
-          Reserve Your Experience
+          {t("experience.cta")}
         </Link>
       </div>
     </section>

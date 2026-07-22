@@ -12,14 +12,14 @@ type LanguageContextValue = {
     setLanguage: (lang: Language) => void;
     dir: "ltr" | "rtl";
     /** Dot-path lookup, e.g. t("menu.categories.beverage") */
-    t: (path: string) => string;
+    t: (path: string) => any;
 };
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 const STORAGE_KEY = "alf-leila-language";
 
-function getNested(obj: unknown, path: string): string {
-    const value = path
+function getNested(obj: unknown, path: string): unknown {
+    return path
         .split(".")
         .reduce<unknown>((acc, key) => {
             if (acc && typeof acc === "object" && key in (acc as Record<string, unknown>)) {
@@ -27,7 +27,6 @@ function getNested(obj: unknown, path: string): string {
             }
             return undefined;
         }, obj);
-    return typeof value === "string" ? value : path;
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
@@ -46,7 +45,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }, [language, dir]);
 
     const setLanguage = (lang: Language) => setLanguageState(lang);
-    const t = (path: string) => getNested(translations[language], path);
+    const t = (path: string) => {
+        const value = getNested(translations[language], path);
+        return value === undefined ? path : value;
+    };
 
     return (
         <LanguageContext.Provider value={{ language, setLanguage, dir, t }}>

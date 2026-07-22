@@ -1,4 +1,5 @@
-import { trpc } from "@/providers/trpc";
+import { trpc } from "../providers/trpc";
+import { useLanguage } from "../providers/language";
 import { CalendarX } from "lucide-react";
 
 const statusColors: Record<string, string> = {
@@ -9,11 +10,12 @@ const statusColors: Record<string, string> = {
 
 export default function MyReservations() {
     const { data: reservations, isLoading } = trpc.reservation.myReservations.useQuery();
+    const { t } = useLanguage();
 
     return (
         <main className="bg-table-dark min-h-screen pt-[72px]">
             <div className="max-w-[700px] mx-auto px-6 py-16">
-                <h1 className="font-display text-cream text-2xl mb-8">My Reservations</h1>
+                <h1 className="font-display text-cream text-2xl mb-8">{t("myReservations.title")}</h1>
 
                 {isLoading ? (
                     <div className="space-y-4">
@@ -29,10 +31,10 @@ export default function MyReservations() {
                                     <p className="text-cream font-medium">
                                         {new Date(res.date).toLocaleDateString()} at {res.time}
                                     </p>
-                                    <p className="text-cream/50 text-sm">{res.guests} guests</p>
+                                    <p className="text-cream/50 text-sm">{res.guests} {t("myReservations.guests")}</p>
                                 </div>
                                 <span className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${statusColors[res.status]}`}>
-                                    {res.status}
+                                    {t(`statuses.${res.status}`)}
                                 </span>
                             </div>
                         ))}
@@ -40,7 +42,7 @@ export default function MyReservations() {
                 ) : (
                     <div className="text-center py-20">
                         <CalendarX className="w-10 h-10 text-gold-primary/30 mx-auto mb-4" />
-                        <p className="text-cream/50">No reservations yet.</p>
+                        <p className="text-cream/50">{t("myReservations.noReservations")}</p>
                     </div>
                 )}
             </div>

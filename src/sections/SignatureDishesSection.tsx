@@ -1,8 +1,9 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { trpc } from "@/providers/trpc";
+import { trpc } from "../providers/trpc";
 import { Link } from "react-router";
+import { useLanguage } from "../providers/language";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -49,6 +50,7 @@ function DishCard({
 export default function SignatureDishesSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const { data: dishes, isLoading, isError, error } = trpc.dish.featured.useQuery();
+  const { t } = useLanguage();
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -82,10 +84,10 @@ export default function SignatureDishesSection() {
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
         <div className="text-center mb-16">
           <p className="font-heading text-gold-primary text-sm tracking-[0.15em] mb-3" style={{ fontStyle: "italic" }}>
-            OUR BEST
+            {t("signature.eyebrow")}
           </p>
           <h2 className="font-display text-cream text-[clamp(1.8rem,3vw,2.8rem)]">
-            Signature Creations
+            {t("signature.title")}
           </h2>
           <div className="w-16 h-[1px] bg-gold-primary mx-auto mt-4" />
         </div>
@@ -98,8 +100,7 @@ export default function SignatureDishesSection() {
           </div>
         ) : isError ? (
           <p className="text-red-400/80 text-center max-w-md mx-auto text-sm">
-            Couldn&apos;t load dishes: {error?.message || "unknown error"}. Check
-            /api/health and your DATABASE_URL configuration.
+            {t("signature.couldNotLoad")} {error?.message || t("signature.unknownError")}. {t("signature.healthHint")}
           </p>
         ) : dishes && dishes.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -109,7 +110,7 @@ export default function SignatureDishesSection() {
           </div>
         ) : (
           <p className="text-cream/40 text-center">
-            No signature dishes yet — add some from the admin dashboard.
+            {t("signature.noDishes")}
           </p>
         )}
 
@@ -118,7 +119,7 @@ export default function SignatureDishesSection() {
             to="/menu"
             className="inline-flex items-center gap-2 px-8 py-3 border border-gold-primary text-gold-primary text-sm font-medium tracking-[0.05em] rounded-full hover:bg-gold-primary hover:text-table-dark transition-all duration-300"
           >
-            View Full Menu
+            {t("signature.viewFullMenu")}
           </Link>
         </div>
       </div>
