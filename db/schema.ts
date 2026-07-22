@@ -29,7 +29,13 @@ export const users = mysqlTable("users", {
 export const dishes = mysqlTable("dishes", {
   id: int("id").primaryKey().autoincrement(),
   name: varchar("name", { length: 100 }).notNull(),
+  // Arabic translation of the dish name. Optional — falls back to `name`
+  // on the frontend when not set, so existing rows keep working.
+  nameAr: varchar("nameAr", { length: 100 }),
   description: text("description"),
+  // Arabic translation of the dish description. Optional — falls back to
+  // `description` on the frontend when not set.
+  descriptionAr: text("descriptionAr"),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   category: mysqlEnum("category", ["appetizer", "main", "dessert", "beverage", "breakfast"]).notNull(),
   // Only meaningful when category === "beverage". Null for every other category.

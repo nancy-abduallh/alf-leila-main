@@ -47,7 +47,9 @@ export const dishRouter = createRouter({
     .input(
       z.object({
         name: z.string().min(1).max(100),
+        nameAr: z.string().max(100).optional(),
         description: z.string().optional(),
+        descriptionAr: z.string().optional(),
         price: z.string(),
         category: categoryEnum,
         subcategory: subcategoryEnum.nullable().optional(),
@@ -73,7 +75,9 @@ export const dishRouter = createRouter({
       z.object({
         id: z.number(),
         name: z.string().min(1).max(100).optional(),
+        nameAr: z.string().max(100).optional(),
         description: z.string().optional(),
+        descriptionAr: z.string().optional(),
         price: z.string().optional(),
         category: categoryEnum.optional(),
         subcategory: subcategoryEnum.nullable().optional(),

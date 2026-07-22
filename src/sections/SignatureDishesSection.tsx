@@ -10,16 +10,23 @@ gsap.registerPlugin(ScrollTrigger);
 function DishCard({
   dish,
   index,
+  isAr,
 }: {
   dish: {
     id: number;
     name: string;
+    nameAr: string | null;
     description: string | null;
+    descriptionAr: string | null;
     price: string;
     imageUrl: string | null;
   };
   index: number;
+  isAr: boolean;
 }) {
+  const displayName = isAr && dish.nameAr ? dish.nameAr : dish.name;
+  const displayDescription = isAr && dish.descriptionAr ? dish.descriptionAr : dish.description;
+
   return (
     <div
       className="dish-card group bg-[rgba(20,20,27,0.85)] backdrop-blur-lg border border-gold-primary/20 rounded overflow-hidden transition-all duration-500 hover:border-gold-primary hover:shadow-gold"
@@ -28,16 +35,16 @@ function DishCard({
       <div className="aspect-square overflow-hidden">
         <img
           src={dish.imageUrl || "/hero-food-molokhia.jpg"}
-          alt={dish.name}
+          alt={displayName}
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
         />
       </div>
       <div className="p-5">
         <h3 className="font-display text-cream text-lg mb-2 group-hover:text-gold-primary transition-colors">
-          {dish.name}
+          {displayName}
         </h3>
         <p className="text-cream/50 text-sm leading-relaxed mb-3 line-clamp-2">
-          {dish.description}
+          {displayDescription}
         </p>
         <p className="font-heading text-gold-primary text-base" style={{ fontStyle: "italic" }}>
           {dish.price} EGP
@@ -50,7 +57,8 @@ function DishCard({
 export default function SignatureDishesSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const { data: dishes, isLoading, isError, error } = trpc.dish.featured.useQuery();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isAr = language === "ar";
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -105,7 +113,7 @@ export default function SignatureDishesSection() {
         ) : dishes && dishes.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {dishes.map((dish, i) => (
-              <DishCard key={dish.id} dish={dish} index={i} />
+              <DishCard key={dish.id} dish={dish} index={i} isAr={isAr} />
             ))}
           </div>
         ) : (

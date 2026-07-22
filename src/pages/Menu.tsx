@@ -21,7 +21,8 @@ export default function Menu() {
   const [searchTerm, setSearchTerm] = useState("");
   const sectionRef = useRef<HTMLDivElement>(null);
   const { addItem } = useCart();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isAr = language === "ar";
 
   // Subcategory filter only makes sense inside Beverages; reset it whenever
   // the person leaves that category so it doesn't silently stay applied.
@@ -47,9 +48,19 @@ export default function Menu() {
       : undefined,
   );
 
-  const filteredDishes = allDishes?.filter((d) =>
-    d.name.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  const getDishName = (dish: NonNullable<typeof allDishes>[number]) =>
+    isAr && dish.nameAr ? dish.nameAr : dish.name;
+
+  const getDishDescription = (dish: NonNullable<typeof allDishes>[number]) =>
+    isAr && dish.descriptionAr ? dish.descriptionAr : dish.description;
+
+  const filteredDishes = allDishes?.filter((d) => {
+    const term = searchTerm.toLowerCase();
+    return (
+      d.name.toLowerCase().includes(term) ||
+      (d.nameAr && d.nameAr.toLowerCase().includes(term))
+    );
+  });
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -81,11 +92,11 @@ export default function Menu() {
   const handleAddToCart = (dish: NonNullable<typeof allDishes>[number]) => {
     addItem({
       dishId: dish.id,
-      name: dish.name,
+      name: getDishName(dish),
       price: dish.price,
       imageUrl: dish.imageUrl,
     });
-    toast.success(`${dish.name} ${t("menu.addedToCart")}`);
+    toast.success(`${getDishName(dish)} ${t("menu.addedToCart")}`);
   };
 
   return (
@@ -180,14 +191,14 @@ export default function Menu() {
                   <div className="aspect-[4/3] overflow-hidden">
                     <img
                       src={dish.imageUrl || "/hero-food-molokhia.jpg"}
-                      alt={dish.name}
+                      alt={getDishName(dish)}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                     />
                   </div>
                   <div className="p-5">
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <h3 className="font-display text-cream text-lg group-hover:text-gold-primary transition-colors">
-                        {dish.name}
+                        {getDishName(dish)}
                       </h3>
                       <span
                         className="font-heading text-gold-primary text-sm whitespace-nowrap"
@@ -197,7 +208,7 @@ export default function Menu() {
                       </span>
                     </div>
                     <p className="text-cream/50 text-sm leading-relaxed mb-4">
-                      {dish.description}
+                      {getDishDescription(dish)}
                     </p>
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                       <div className="flex items-center gap-1.5">

@@ -19,11 +19,13 @@ import {
     SelectTrigger,
     SelectValue,
 } from "../ui/select";
-import type { Dish } from "@/db/schema";
+import type { Dish } from "../../../db/schema";
 
 export type DishFormValues = {
     name: string;
+    nameAr: string;
     description: string;
+    descriptionAr: string;
     price: string;
     category: "appetizer" | "main" | "dessert" | "beverage" | "breakfast";
     subcategory: "coffee" | "tea" | "others" | "";
@@ -34,7 +36,9 @@ export type DishFormValues = {
 
 const emptyForm: DishFormValues = {
     name: "",
+    nameAr: "",
     description: "",
+    descriptionAr: "",
     price: "",
     category: "main",
     subcategory: "",
@@ -66,7 +70,9 @@ export function DishFormDialog({
                 dish
                     ? {
                         name: dish.name,
+                        nameAr: dish.nameAr ?? "",
                         description: dish.description ?? "",
+                        descriptionAr: dish.descriptionAr ?? "",
                         price: dish.price,
                         category: dish.category,
                         subcategory: dish.subcategory ?? "",
@@ -86,7 +92,7 @@ export function DishFormDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>{dish ? "Edit Dish" : "Add Dish"}</DialogTitle>
                     <DialogDescription>
@@ -95,26 +101,52 @@ export function DishFormDialog({
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="dish-name">Name</Label>
-                        <Input
-                            id="dish-name"
-                            required
-                            maxLength={100}
-                            value={values.name}
-                            onChange={(e) => setValues((v) => ({ ...v, name: e.target.value }))}
-                            placeholder="Molokhia Royale"
-                        />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="dish-name">Name (English)</Label>
+                            <Input
+                                id="dish-name"
+                                required
+                                maxLength={100}
+                                value={values.name}
+                                onChange={(e) => setValues((v) => ({ ...v, name: e.target.value }))}
+                                placeholder="Molokhia Royale"
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="dish-name-ar">Name (Arabic)</Label>
+                            <Input
+                                id="dish-name-ar"
+                                dir="rtl"
+                                maxLength={100}
+                                value={values.nameAr}
+                                onChange={(e) => setValues((v) => ({ ...v, nameAr: e.target.value }))}
+                                placeholder="ملوخية رويال"
+                            />
+                        </div>
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="dish-description">Description</Label>
+                        <Label htmlFor="dish-description">Description (English)</Label>
                         <Textarea
                             id="dish-description"
                             rows={3}
                             value={values.description}
                             onChange={(e) => setValues((v) => ({ ...v, description: e.target.value }))}
                             placeholder="Short description shown on the menu"
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="dish-description-ar">Description (Arabic)</Label>
+                        <Textarea
+                            id="dish-description-ar"
+                            dir="rtl"
+                            rows={3}
+                            value={values.descriptionAr}
+                            onChange={(e) => setValues((v) => ({ ...v, descriptionAr: e.target.value }))}
+                            placeholder="وصف مختصر يظهر في القائمة"
                         />
                     </div>
 

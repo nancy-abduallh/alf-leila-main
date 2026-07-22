@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { useAuth } from "@/hooks/useAuth";
-import { trpc } from "@/providers/trpc";
+import { useAuth } from "../hooks/useAuth";
+import { trpc } from "../providers/trpc";
 import {
   CheckCircle,
   XCircle,
@@ -17,15 +17,15 @@ import {
   ShoppingBag,
   Star,
 } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { Button } from "../components/ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "../components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,9 +35,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { DishFormDialog, type DishFormValues } from "@/components/admin/DishFormDialog";
-import type { Dish } from "@db/schema";
+} from "../components/ui/alert-dialog";
+import { DishFormDialog, type DishFormValues } from "../components/admin/DishFormDialog";
+import type { Dish } from "../../db/schema";
 import { toast } from "sonner";
 import {
   ResponsiveContainer,
@@ -51,7 +51,7 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
-import { ADMIN_LOGIN_PATH } from "@/const";
+import { ADMIN_LOGIN_PATH } from "../const";
 
 const reservationStatusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-400",
@@ -181,7 +181,9 @@ export default function Admin() {
   const handleDishSubmit = (values: DishFormValues) => {
     const payload = {
       name: values.name,
+      nameAr: values.nameAr || undefined,
       description: values.description || undefined,
+      descriptionAr: values.descriptionAr || undefined,
       price: values.price,
       category: values.category,
       subcategory:
@@ -481,6 +483,7 @@ export default function Admin() {
                     <thead>
                       <tr className="border-b border-gold-primary/10">
                         <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Name</th>
+                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Arabic Name</th>
                         <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Category</th>
                         <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Type</th>
                         <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Price</th>
@@ -493,6 +496,9 @@ export default function Admin() {
                       {allDishes.map((dish) => (
                         <tr key={dish.id} className="border-b border-gold-primary/5 hover:bg-gold-primary/5 transition-colors">
                           <td className="px-4 py-3 text-cream text-sm">{dish.name}</td>
+                          <td className="px-4 py-3 text-cream/70 text-sm" dir="rtl">
+                            {dish.nameAr || <span className="text-cream/30" dir="ltr">—</span>}
+                          </td>
                           <td className="px-4 py-3">
                             <span className="px-2.5 py-1 text-xs capitalize bg-gold-primary/10 text-gold-primary rounded-full">
                               {dish.category}
