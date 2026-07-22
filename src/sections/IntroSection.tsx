@@ -81,10 +81,10 @@ export default function IntroSection() {
             </div>
             <Link
               to="/menu"
-              className="left-reveal inline-flex items-center gap-2 text-gold-primary text-sm font-medium tracking-[0.05em] group"
+              className="left-reveal inline-flex items-center gap-2 text-gold-primary text-sm font-medium tracking-[0.05em] group relative"
             >
               {t("intro.cta")}
-              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1 rtl:rotate-180 rtl:group-hover:-translate-x-1" />
               <span className="absolute bottom-0 left-0 w-0 h-[1px] bg-gold-primary transition-all duration-300 group-hover:w-full" />
             </Link>
           </div>

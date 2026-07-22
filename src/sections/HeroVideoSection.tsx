@@ -83,7 +83,7 @@ export default function HeroVideoSection() {
           className="reveal-item mt-8 px-8 py-3 bg-gold-primary text-table-dark font-medium text-sm tracking-[0.05em] rounded-full hover:bg-cream hover:shadow-gold transition-all duration-300 inline-flex items-center gap-2"
         >
           {t("hero.cta")}
-          <ArrowRight className="w-4 h-4" />
+          <ArrowRight className="w-4 h-4 rtl:rotate-180" />
         </Link>
       </div>
     </section>
