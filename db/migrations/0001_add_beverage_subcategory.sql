@@ -1,0 +1,1 @@
+ALTER TABLE `dishes` ADD `subcategory` enum('coffee','tea','others');
