@@ -54,7 +54,10 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  h1, h2, h3, h4 {
+  h1,
+  h2,
+  h3,
+  h4 {
     font-family: 'Playfair Display', serif;
   }
 
@@ -75,12 +78,10 @@
 
 @layer components {
   .gold-shimmer {
-    background: linear-gradient(
-      90deg,
-      var(--color-gold-primary) 0%,
-      var(--color-gold-light) 50%,
-      var(--color-gold-primary) 100%
-    );
+    background: linear-gradient(90deg,
+        var(--color-gold-primary) 0%,
+        var(--color-gold-light) 50%,
+        var(--color-gold-primary) 100%);
     background-size: 200% 100%;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -89,40 +90,47 @@
   }
 
   .gold-border-shimmer {
-    background: linear-gradient(
-      90deg,
-      var(--color-gold-dark) 0%,
-      var(--color-gold-primary) 50%,
-      var(--color-gold-dark) 100%
-    );
+    background: linear-gradient(90deg,
+        var(--color-gold-dark) 0%,
+        var(--color-gold-primary) 50%,
+        var(--color-gold-dark) 100%);
     background-size: 200% 100%;
     animation: shimmer 3s ease-in-out infinite;
   }
 }
 
 @keyframes shimmer {
-  0%, 100% {
+
+  0%,
+  100% {
     background-position: 0% 50%;
   }
+
   50% {
     background-position: 100% 50%;
   }
 }
 
 @keyframes float {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0px);
   }
+
   50% {
     transform: translateY(-10px);
   }
 }
 
 @keyframes flicker {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
     transform: scale(1);
   }
+
   50% {
     opacity: 0.85;
     transform: scale(1.08);
@@ -134,12 +142,23 @@
     opacity: 0;
     transform: translateY(0) scaleX(1);
   }
+
   50% {
     opacity: 0.6;
     transform: translateY(-20px) scaleX(1.1);
   }
+
   100% {
     opacity: 0;
     transform: translateY(-40px) scaleX(0.9);
   }
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3307
--- Generation Time: Jul 22, 2026 at 10:07 AM
+-- Generation Time: Aug 23, 2026 at 06:34 AM
 -- Server version: 10.4.28-MariaDB
 -- PHP Version: 8.3.11
 
@@ -48,7 +48,7 @@ CREATE TABLE `dishes` (
 
 INSERT INTO `dishes` (`id`, `name`, `nameAr`, `description`, `descriptionAr`, `price`, `category`, `subcategory`, `imageUrl`, `featured`, `stock`, `createdAt`) VALUES
 (1, 'Molokhia Royale', 'ملوخية رويال', 'The king\'s soup. Fresh jute leaves in a garlic-infused broth, served with vermicelli rice and slow-roasted chicken.', 'شوربة الملوك. أوراق ملوخية طازجة في مرقة معطرة بالثوم، تُقدم مع أرز بالشعيرية ودجاج مشوي ببطء.', 285.00, 'main', NULL, '/hero-food-molokhia.jpg', 1, NULL, '2026-07-05 16:16:14'),
-(2, 'Koshari Imperial', 'كشري إمبريال', 'Cairo\'s iconic comfort, elevated. Layers of rice, lentils, pasta, and caramelized onions crowned with our secret tomato sauce.', 'أشهر أطباق القاهرة بلمسة راقية. طبقات من الأرز والعدس والمكرونة والبصل المقرمش، متوَّجة بصلصة الطماطم السرية.', 195.00, 'main', NULL, '/hero-food-koshari.jpg', 0, NULL, '2026-07-05 16:16:55'),
+(2, 'Koshari ', 'كشري ', 'Cairo\'s iconic comfort, elevated. Layers of rice, lentils, pasta, and caramelized onions crowned with our secret tomato sauce.', 'أشهر أطباق القاهرة بلمسة راقية. طبقات من الأرز والعدس والمكرونة والبصل المقرمش، متوَّجة بصلصة الطماطم السرية.', 195.00, 'main', NULL, '/hero-food-koshari.jpg', 0, NULL, '2026-07-05 16:16:55'),
 (3, 'Hamam Mahshi', 'حمام محشي', 'Whole pigeon stuffed with fragrant orzo and spiced ground beef, roasted to golden perfection.', 'حمام كامل محشو بالأرز اللسان المعطر واللحم المفروم المتبل، مشوي حتى الذهبية المثالية.', 425.00, 'main', NULL, '/hero-food-hamam.jpg', 1, NULL, '2026-07-05 16:17:31'),
 (4, 'Um Ali Gold', 'أم علي الذهبية', 'Our crown dessert. Puff pastry baked in sweetened milk with raisins, coconut flakes, and crushed pistachios.', 'حلوى تاجنا. عجينة مورقة مخبوزة في حليب محلى مع زبيب ورقائق جوز الهند والفستق المطحون.', 165.00, 'dessert', NULL, '/hero-food-umali.jpg', 1, NULL, '2026-07-05 16:18:13'),
 (5, 'Hawawshi', 'حواوشي', 'A classic Egyptian street food staple; crispy baladi bread stuffed entirely with a savory mixture of spiced minced beef, onions, and peppers, then oven-baked until golden.', 'طبق شعبي مصري كلاسيكي؛ خبز بلدي مقرمش محشو بخليط لذيذ من اللحم المفروم المتبل والبصل والفلفل، مخبوز حتى يصبح ذهبي اللون.', 110.00, 'main', NULL, '/Hawawshi.png', 0, NULL, '2026-07-05 16:36:23'),
@@ -166,7 +166,115 @@ INSERT INTO `page_views` (`id`, `path`, `createdAt`) VALUES
 (40, '/', '2026-07-22 09:38:16'),
 (41, '/', '2026-07-22 09:59:04'),
 (42, '/admin', '2026-07-22 10:05:47'),
-(43, '/menu', '2026-07-22 10:06:02');
+(43, '/menu', '2026-07-22 10:06:02'),
+(44, '/', '2026-07-22 11:22:34'),
+(45, '/admin', '2026-07-22 11:22:34'),
+(46, '/admin', '2026-07-22 11:32:46'),
+(47, '/', '2026-07-22 11:32:59'),
+(48, '/', '2026-07-22 17:13:08'),
+(49, '/menu', '2026-07-22 17:32:55'),
+(50, '/reserve', '2026-07-22 17:33:01'),
+(51, '/', '2026-08-04 08:09:15'),
+(52, '/contact', '2026-08-04 08:09:32'),
+(53, '/', '2026-08-04 08:09:37'),
+(54, '/', '2026-08-08 09:26:15'),
+(55, '/menu', '2026-08-08 09:26:49'),
+(56, '/', '2026-08-08 09:27:04'),
+(57, '/', '2026-08-08 09:29:48'),
+(58, '/menu', '2026-08-08 09:47:23'),
+(59, '/', '2026-08-08 09:47:37'),
+(60, '/admin', '2026-08-08 09:47:56'),
+(61, '/', '2026-08-08 09:47:59'),
+(62, '/admin/login', '2026-08-08 09:48:37'),
+(63, '/admin/login', '2026-08-08 09:51:41'),
+(64, '/admin', '2026-08-08 09:53:07'),
+(65, '/admin', '2026-08-08 09:53:17'),
+(66, '/login', '2026-08-08 10:13:41'),
+(67, '/', '2026-08-08 10:14:08'),
+(68, '/', '2026-08-08 10:17:44'),
+(69, '/admin', '2026-08-08 11:36:18'),
+(70, '/', '2026-08-08 11:36:19'),
+(71, '/admin/login', '2026-08-08 11:36:23'),
+(72, '/admin', '2026-08-08 11:36:33'),
+(73, '/login', '2026-08-08 11:36:53'),
+(74, '/', '2026-08-08 11:37:06'),
+(75, '/menu', '2026-08-08 11:38:50'),
+(76, '/admin', '2026-08-08 11:42:58'),
+(77, '/menu', '2026-08-08 11:42:58'),
+(78, '/admin', '2026-08-08 11:42:59'),
+(79, '/', '2026-08-08 11:43:02'),
+(80, '/admin', '2026-08-08 11:43:35'),
+(81, '/menu', '2026-08-08 11:43:35'),
+(82, '/', '2026-08-08 11:43:37'),
+(83, '/checkout', '2026-08-08 11:44:14'),
+(84, '/checkout', '2026-08-08 11:44:46'),
+(85, '/admin', '2026-08-08 11:44:46'),
+(86, '/', '2026-08-08 11:44:46'),
+(87, '/checkout', '2026-08-08 11:46:47'),
+(88, '/admin', '2026-08-08 11:46:47'),
+(89, '/', '2026-08-08 11:46:48'),
+(90, '/admin', '2026-08-08 11:49:17'),
+(91, '/checkout', '2026-08-08 11:49:17'),
+(92, '/', '2026-08-08 11:49:18'),
+(93, '/admin', '2026-08-08 11:49:47'),
+(94, '/', '2026-08-08 11:49:47'),
+(95, '/checkout', '2026-08-08 11:49:47'),
+(96, '/admin', '2026-08-08 11:50:01'),
+(97, '/checkout', '2026-08-08 11:50:02'),
+(98, '/', '2026-08-08 11:50:02'),
+(99, '/checkout', '2026-08-08 11:50:32'),
+(100, '/admin', '2026-08-08 11:50:33'),
+(101, '/', '2026-08-08 11:50:33'),
+(102, '/admin', '2026-08-08 11:51:19'),
+(103, '/', '2026-08-08 11:51:19'),
+(104, '/checkout', '2026-08-08 11:51:19'),
+(105, '/admin/login', '2026-08-08 11:52:33'),
+(106, '/', '2026-08-08 11:52:48'),
+(107, '/admin', '2026-08-08 11:53:03'),
+(108, '/menu', '2026-08-08 11:53:09'),
+(109, '/checkout', '2026-08-08 11:53:49'),
+(110, '/checkout', '2026-08-08 12:13:40'),
+(111, '/admin', '2026-08-08 12:13:40'),
+(112, '/menu', '2026-08-08 12:14:00'),
+(113, '/checkout', '2026-08-08 12:14:24'),
+(114, '/login', '2026-08-08 12:14:27'),
+(115, '/', '2026-08-08 12:14:40'),
+(116, '/checkout', '2026-08-08 12:14:44'),
+(117, '/', '2026-08-08 12:19:37'),
+(118, '/checkout', '2026-08-08 12:25:29'),
+(119, '/admin/login', '2026-08-08 12:25:58'),
+(120, '/admin', '2026-08-08 12:26:11'),
+(121, '/my-orders', '2026-08-08 12:26:35'),
+(122, '/my-orders', '2026-08-08 12:26:43'),
+(123, '/login', '2026-08-08 12:26:52'),
+(124, '/', '2026-08-08 12:26:56'),
+(125, '/my-orders', '2026-08-08 12:26:58'),
+(126, '/my-orders', '2026-08-08 12:27:25'),
+(127, '/admin', '2026-08-08 12:27:25'),
+(128, '/', '2026-08-08 12:27:27'),
+(129, '/menu', '2026-08-08 12:29:51'),
+(130, '/', '2026-08-08 12:30:09'),
+(131, '/', '2026-08-10 07:17:30'),
+(132, '/menu', '2026-08-10 07:23:02'),
+(133, '/', '2026-08-10 07:24:41'),
+(134, '/menu', '2026-08-10 07:29:41'),
+(135, '/reserve', '2026-08-10 07:30:19'),
+(136, '/story', '2026-08-10 07:30:28'),
+(137, '/contact', '2026-08-10 07:30:42'),
+(138, '/', '2026-08-10 07:30:50'),
+(139, '/my-orders', '2026-08-23 06:01:09'),
+(140, '/my-reservations', '2026-08-23 06:01:12'),
+(141, '/profile', '2026-08-23 06:01:17'),
+(142, '/', '2026-08-23 06:01:23'),
+(143, '/menu', '2026-08-23 06:01:36'),
+(144, '/', '2026-08-23 06:02:05'),
+(145, '/reserve', '2026-08-23 06:02:46'),
+(146, '/contact', '2026-08-23 06:02:47'),
+(147, '/', '2026-08-23 06:02:59'),
+(148, '/menu', '2026-08-23 06:03:28'),
+(149, '/', '2026-08-23 06:05:24'),
+(150, '/', '2026-08-23 06:32:18'),
+(151, '/menu', '2026-08-23 06:32:26');
 
 -- --------------------------------------------------------
 
@@ -225,8 +333,8 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `email`, `passwordHash`, `name`, `avatar`, `role`, `createdAt`, `updatedAt`, `lastSignInAt`) VALUES
-(1, 'admin@gmail.com', '20ee1baae098f5cf47c46a11e32f75a1:3d3d2be338415a7740d1d61256194ed4c3663f180f029e004c05a26271548e63e4016e173534246c80b91bef4a5849cd0bd4f49c26231f92ad81bfe31bed7937', 'admin', NULL, 'admin', '2026-07-05 15:51:23', '2026-07-22 05:49:43', '2026-07-22 05:49:43'),
-(2, 'nancy@gmail.com', '48b9aa1075eee87f72d141e88c04b370:a931fd75b0b47dfe49cd0b2d743d96465d9c1e73282aa9c1bdf28c997d8ce34eaaa5b274c39c9778a77c35c8ae368a829d369209c8e35e38a4b43b84f27c9560', 'Nancy Abduallh', NULL, 'user', '2026-07-05 17:36:57', '2026-07-22 06:32:34', '2026-07-22 06:32:34'),
+(1, 'admin@gmail.com', '20ee1baae098f5cf47c46a11e32f75a1:3d3d2be338415a7740d1d61256194ed4c3663f180f029e004c05a26271548e63e4016e173534246c80b91bef4a5849cd0bd4f49c26231f92ad81bfe31bed7937', 'admin', NULL, 'admin', '2026-07-05 15:51:23', '2026-08-08 09:26:10', '2026-08-08 09:26:10'),
+(2, 'nancy@gmail.com', '48b9aa1075eee87f72d141e88c04b370:a931fd75b0b47dfe49cd0b2d743d96465d9c1e73282aa9c1bdf28c997d8ce34eaaa5b274c39c9778a77c35c8ae368a829d369209c8e35e38a4b43b84f27c9560', 'Nancy Abduallh', NULL, 'user', '2026-07-05 17:36:57', '2026-08-08 09:26:55', '2026-08-08 09:26:55'),
 (3, 'mazen@gmail.com', '0cb8d6617e132fa39925f5fa3c564dd0:ec7f9d696f93ba934cc5211a859c9c888e6e48c425884cfb980a6a58e85cb27857182e918045fecba4c87da8ff49a558e2c50c3fac2cba1c53ba231a9297f2e7', 'Mazen', NULL, 'user', '2026-07-05 17:46:38', '2026-07-05 17:46:38', '2026-07-05 17:46:38');
 
 --
@@ -290,19 +398,19 @@ ALTER TABLE `dishes`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=40;
 
 --
 -- AUTO_INCREMENT for table `page_views`
 --
 ALTER TABLE `page_views`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=44;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=152;
 
 --
 -- AUTO_INCREMENT for table `reservations`
