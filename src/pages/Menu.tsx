@@ -36,9 +36,9 @@ const subcategoryOrder: Subcategory[] = [
   "others",
 ];
 
-const { session: tableSession } = useTableSession();
-
 export default function Menu() {
+  const { session: tableSession } = useTableSession();
+
   const [activeCategory, setActiveCategory] =
     useState<Category>("all");
 
