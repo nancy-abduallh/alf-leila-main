@@ -12,3 +12,9 @@ export const Paths = {
   login: "/login",
   register: "/register",
 } as const;
+
+// How long a dine-in order stays editable before it's sent to the kitchen.
+export const TableOrdering = {
+  editWindowMs: 5 * 60 * 1000,
+  batchPollIntervalMs: 15 * 1000,
+} as const;

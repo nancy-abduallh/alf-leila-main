@@ -4,6 +4,7 @@ import {
   varchar,
   text,
   timestamp,
+  datetime,
   decimal,
   boolean,
   date,
@@ -29,12 +30,10 @@ export const users = mysqlTable("users", {
 export const dishes = mysqlTable("dishes", {
   id: int("id").primaryKey().autoincrement(),
   name: varchar("name", { length: 100 }).notNull(),
-  // Arabic translation of the dish name. Optional — falls back to `name`
-  // on the frontend when not set, so existing rows keep working.
+  // Arabic display name. Kept in the DB (rather than translations.ts) because
+  // dish content is data, not static UI copy.
   nameAr: varchar("nameAr", { length: 100 }),
   description: text("description"),
-  // Arabic translation of the dish description. Optional — falls back to
-  // `description` on the frontend when not set.
   descriptionAr: text("descriptionAr"),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   category: mysqlEnum("category", ["appetizer", "main", "dessert", "beverage", "breakfast"]).notNull(),
@@ -56,14 +55,52 @@ export const reservations = mysqlTable("reservations", {
   time: time("time").notNull(),
   guests: int("guests").notNull(),
   notes: text("notes"),
+  // Customer-facing request (e.g. "Window seat", "Outdoor") — not a guaranteed assignment.
+  preferredArea: varchar("preferredArea", { length: 100 }),
+  // Actual table assigned by staff once the reservation is confirmed.
+  tableNumber: varchar("tableNumber", { length: 20 }),
   status: mysqlEnum("status", ["pending", "confirmed", "cancelled"]).default("pending").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// A physical table in the restaurant.
+export const tables = mysqlTable("tables", {
+  id: int("id").primaryKey().autoincrement(),
+  tableNumber: varchar("tableNumber", { length: 20 }).notNull().unique(),
+  seats: int("seats"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// A table can have several printed QR codes (one per seat, one per side, etc).
+// Every code on a table resolves to the same tableId.
+export const tableQrCodes = mysqlTable("table_qr_codes", {
+  id: int("id").primaryKey().autoincrement(),
+  tableId: int("tableId").notNull(),
+  code: varchar("code", { length: 64 }).notNull().unique(),
+  label: varchar("label", { length: 50 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// Groups every dine-in order placed at the same table within the 5-minute
+// edit window, so the kitchen gets one combined ticket per table sitting.
+export const tableOrderBatches = mysqlTable("table_order_batches", {
+  id: int("id").primaryKey().autoincrement(),
+  tableId: int("tableId").notNull(),
+  tableNumber: varchar("tableNumber", { length: 20 }).notNull(),
+  status: mysqlEnum("status", ["open", "sent_to_kitchen", "cancelled"]).default("open").notNull(),
+  opensAt: timestamp("opensAt").defaultNow().notNull(),
+  sendAt: timestamp("sendAt").defaultNow().notNull(),
+  // datetime (not timestamp) — MySQL/MariaDB only special-cases the first
+  // TIMESTAMP column in a table; any nullable TIMESTAMP after that ends up
+  // implicitly NOT NULL and rejects a NULL default. DATETIME has no such quirk.
+  sentAt: datetime("sentAt"),
 });
 
 export const orders = mysqlTable("orders", {
   id: int("id").primaryKey().autoincrement(),
   userId: int("userId").notNull(),
   status: mysqlEnum("status", [
+    "pending_edit", // dine-in only: still inside the 5-minute edit window
     "pending",
     "paid",
     "preparing",
@@ -73,12 +110,20 @@ export const orders = mysqlTable("orders", {
   ])
     .default("pending")
     .notNull(),
+  orderSource: mysqlEnum("orderSource", ["delivery", "dine_in"]).default("delivery").notNull(),
   totalAmount: decimal("totalAmount", { precision: 10, scale: 2 }).notNull(),
-  phone: varchar("phone", { length: 20 }).notNull(),
-  address: varchar("address", { length: 255 }).notNull(),
-  city: varchar("city", { length: 100 }).notNull(),
+  // Delivery-only fields — null for dine-in orders.
+  phone: varchar("phone", { length: 20 }),
+  address: varchar("address", { length: 255 }),
+  city: varchar("city", { length: 100 }),
   notes: text("notes"),
   paymobOrderId: varchar("paymobOrderId", { length: 64 }),
+  // Dine-in-only fields — null for delivery orders.
+  tableId: int("tableId"),
+  tableNumber: varchar("tableNumber", { length: 20 }),
+  batchId: int("batchId"),
+  // datetime, same reasoning as tableOrderBatches.sentAt above.
+  editableUntil: datetime("editableUntil"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt")
     .defaultNow()
@@ -115,6 +160,12 @@ export type Dish = typeof dishes.$inferSelect;
 export type InsertDish = typeof dishes.$inferInsert;
 export type Reservation = typeof reservations.$inferSelect;
 export type InsertReservation = typeof reservations.$inferInsert;
+export type Table = typeof tables.$inferSelect;
+export type InsertTable = typeof tables.$inferInsert;
+export type TableQrCode = typeof tableQrCodes.$inferSelect;
+export type InsertTableQrCode = typeof tableQrCodes.$inferInsert;
+export type TableOrderBatch = typeof tableOrderBatches.$inferSelect;
+export type InsertTableOrderBatch = typeof tableOrderBatches.$inferInsert;
 export type Order = typeof orders.$inferSelect;
 export type InsertOrder = typeof orders.$inferInsert;
 export type OrderItem = typeof orderItems.$inferSelect;

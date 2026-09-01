@@ -13,6 +13,7 @@ export const reservationRouter = createRouter({
         time: z.string(),
         guests: z.number().min(1).max(20),
         notes: z.string().optional(),
+        preferredArea: z.string().max(100).optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -26,6 +27,7 @@ export const reservationRouter = createRouter({
         time: input.time,
         guests: input.guests,
         notes: input.notes,
+        preferredArea: input.preferredArea,
       });
       return { success: true, id: Number(result[0].insertId) };
     }),
@@ -56,6 +58,23 @@ export const reservationRouter = createRouter({
       await db
         .update(reservations)
         .set({ status: input.status })
+        .where(eq(reservations.id, input.id));
+      return { success: true };
+    }),
+
+  // Staff assigns (or clears, by passing null) the physical table number.
+  assignTable: adminQuery
+    .input(
+      z.object({
+        id: z.number(),
+        tableNumber: z.string().max(20).nullable(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const db = getDb();
+      await db
+        .update(reservations)
+        .set({ tableNumber: input.tableNumber })
         .where(eq(reservations.id, input.id));
       return { success: true };
     }),

@@ -4,15 +4,18 @@ import './index.css'
 import { TRPCProvider } from "./providers/trpc"
 import { CartProvider } from "./providers/cart"
 import { LanguageProvider } from "./providers/language"
+import { TableSessionProvider } from "./providers/tableSession"
 import App from './App.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <BrowserRouter>
     <LanguageProvider>
       <TRPCProvider>
-        <CartProvider>
-          <App />
-        </CartProvider>
+        <TableSessionProvider>
+          <CartProvider>
+            <App />
+          </CartProvider>
+        </TableSessionProvider>
       </TRPCProvider>
     </LanguageProvider>
   </BrowserRouter>,

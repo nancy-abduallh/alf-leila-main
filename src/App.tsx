@@ -19,6 +19,9 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import AdminLogin from "./pages/AdminLogin";
 import NotFound from "./pages/NotFound";
+import TableScan from "./pages/TableScan";
+import TableCheckout from "./pages/TableCheckout";
+import OrderPending from "./pages/OrderPending";
 
 function PageViewTracker() {
   const location = useLocation();
@@ -31,9 +34,6 @@ function PageViewTracker() {
 
   return null;
 }
-
-//favicon
-
 
 export default function App() {
   const location = useLocation();
@@ -51,6 +51,9 @@ export default function App() {
         <Route path="/contact" element={<Contact />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/order/complete" element={<OrderComplete />} />
+        <Route path="/table/:code" element={<TableScan />} />
+        <Route path="/table-checkout" element={<TableCheckout />} />
+        <Route path="/order/pending/:orderId" element={<OrderPending />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/my-orders" element={<MyOrders />} />
         <Route path="/my-reservations" element={<MyReservations />} />

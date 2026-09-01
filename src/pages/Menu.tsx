@@ -6,6 +6,7 @@ import { useCart } from "../providers/cart";
 import { useLanguage } from "../providers/language";
 import { Search, SlidersHorizontal, Plus, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { useTableSession } from "../providers/tableSession";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -34,6 +35,8 @@ const subcategoryOrder: Subcategory[] = [
   "tea",
   "others",
 ];
+
+const { session: tableSession } = useTableSession();
 
 export default function Menu() {
   const [activeCategory, setActiveCategory] =
@@ -170,6 +173,15 @@ export default function Menu() {
           <div className="w-16 h-[1px] bg-gold-primary mt-4" />
         </div>
       </div>
+
+      {tableSession && (
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-12 pt-6">
+          <div className="bg-gold-primary/10 border border-gold-primary/30 rounded-lg px-4 py-3 text-gold-primary text-sm">
+            Ordering for Table {tableSession.tableNumber} — anything you add will go to the kitchen together
+            with the rest of your table.
+          </div>
+        </div>
+      )}
 
       {/* Menu Content */}
       <div

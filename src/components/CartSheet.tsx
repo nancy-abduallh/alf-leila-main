@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/providers/cart";
+import { useTableSession } from "@/providers/tableSession";
 
 type CartSheetProps = {
     open: boolean;
@@ -17,12 +18,13 @@ type CartSheetProps = {
 
 export function CartSheet({ open, onOpenChange }: CartSheetProps) {
     const { items, updateQuantity, removeItem, totalPrice } = useCart();
+    const { session } = useTableSession();
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent side="right" className="w-full sm:max-w-md flex flex-col">
                 <SheetHeader>
-                    <SheetTitle>Your Order</SheetTitle>
+                    <SheetTitle>{session ? `Your Order — Table ${session.tableNumber}` : "Your Order"}</SheetTitle>
                 </SheetHeader>
 
                 <div className="flex-1 overflow-y-auto px-4 space-y-4">
@@ -79,7 +81,9 @@ export function CartSheet({ open, onOpenChange }: CartSheetProps) {
                             <span>{totalPrice.toFixed(2)} EGP</span>
                         </div>
                         <Button asChild className="w-full" size="lg" onClick={() => onOpenChange(false)}>
-                            <Link to="/checkout">Proceed to Checkout</Link>
+                            <Link to={session ? "/table-checkout" : "/checkout"}>
+                                {session ? `Send to Table ${session.tableNumber}` : "Proceed to Checkout"}
+                            </Link>
                         </Button>
                     </SheetFooter>
                 )}

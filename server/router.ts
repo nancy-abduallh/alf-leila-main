@@ -4,6 +4,7 @@ import { reservationRouter } from "./reservation-router";
 import { orderRouter } from "./order-router";
 import { reviewRouter } from "./review-router";
 import { analyticsRouter } from "./analytics-router";
+import { tableRouter } from "./table-router";
 import { createRouter, publicQuery } from "./middleware";
 
 export const appRouter = createRouter({
@@ -14,6 +15,7 @@ export const appRouter = createRouter({
   order: orderRouter,
   review: reviewRouter,
   analytics: analyticsRouter,
+  table: tableRouter,
 });
 
 export type AppRouter = typeof appRouter;

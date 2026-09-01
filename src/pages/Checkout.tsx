@@ -20,7 +20,9 @@ export default function Checkout() {
     const createOrder = trpc.order.create.useMutation({
         onSuccess: (data) => {
             clear();
-            window.location.href = data.iframeUrl;
+            if (data.orderSource === "delivery") {
+                window.location.href = data.iframeUrl;
+            }
         },
         onError: (err) => toast.error(err.message),
     });
@@ -83,6 +85,7 @@ export default function Checkout() {
             return;
         }
         createOrder.mutate({
+            orderSource: "delivery",
             items: items.map((i) => ({ dishId: i.dishId, quantity: i.quantity })),
             phone,
             address,

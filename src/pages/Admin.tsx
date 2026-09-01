@@ -16,6 +16,7 @@ import {
   DollarSign,
   ShoppingBag,
   Star,
+  QrCode,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Button } from "../components/ui/button";
@@ -52,6 +53,7 @@ import {
   Legend,
 } from "recharts";
 import { ADMIN_LOGIN_PATH } from "../const";
+import { Input } from "../components/ui/input";
 
 const reservationStatusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-400",
@@ -92,6 +94,7 @@ export default function Admin() {
 
   useEffect(() => {
     if (authLoading) return;
+
     if (!user) {
       navigate(ADMIN_LOGIN_PATH);
     } else if (!isAdmin) {
@@ -101,20 +104,68 @@ export default function Admin() {
 
   const utils = trpc.useUtils();
 
-  const { data: stats, isLoading: statsLoading } = trpc.analytics.stats.useQuery(undefined, {
+  const { data: stats, isLoading: statsLoading } =
+    trpc.analytics.stats.useQuery(undefined, {
+      enabled: isAdmin,
+    });
+
+  const {
+    data: reservations,
+    isLoading: reservationsLoading,
+  } = trpc.reservation.list.useQuery(undefined, {
     enabled: isAdmin,
   });
 
-  const { data: reservations, isLoading: reservationsLoading } = trpc.reservation.list.useQuery(
-    undefined,
-    { enabled: isAdmin },
-  );
+  const {
+    data: allTables,
+    isLoading: tablesLoading,
+  } = trpc.table.list.useQuery(undefined, {
+    enabled: isAdmin,
+  });
+
+  const [newTableNumber, setNewTableNumber] = useState("");
+
+  const createTable = trpc.table.create.useMutation({
+    onSuccess: () => {
+      utils.table.list.invalidate();
+      setNewTableNumber("");
+      toast.success("Table added");
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const addQrCode = trpc.table.addQrCode.useMutation({
+    onSuccess: () => {
+      utils.table.list.invalidate();
+      toast.success("QR code generated");
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const deleteTable = trpc.table.delete.useMutation({
+    onSuccess: () => {
+      utils.table.list.invalidate();
+      toast.success("Table removed");
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const assignReservationTable = trpc.reservation.assignTable.useMutation({
+    onSuccess: () => {
+      utils.reservation.list.invalidate();
+      toast.success("Table assigned");
+    },
+    onError: (err) => toast.error(err.message),
+  });
 
   const updateReservationStatus = trpc.reservation.updateStatus.useMutation({
     onSuccess: () => utils.reservation.list.invalidate(),
   });
 
-  const { data: orders, isLoading: ordersLoading } = trpc.order.list.useQuery(undefined, {
+  const {
+    data: orders,
+    isLoading: ordersLoading,
+  } = trpc.order.list.useQuery(undefined, {
     enabled: isAdmin,
   });
 
@@ -126,7 +177,10 @@ export default function Admin() {
     onError: (err) => toast.error(err.message),
   });
 
-  const { data: allDishes, isLoading: dishesLoading } = trpc.dish.list.useQuery(undefined, {
+  const {
+    data: allDishes,
+    isLoading: dishesLoading,
+  } = trpc.dish.list.useQuery(undefined, {
     enabled: isAdmin,
   });
 
@@ -160,7 +214,10 @@ export default function Admin() {
     onError: (err) => toast.error(err.message),
   });
 
-  const { data: reviews, isLoading: reviewsLoading } = trpc.review.list.useQuery(undefined, {
+  const {
+    data: reviews,
+    isLoading: reviewsLoading,
+  } = trpc.review.list.useQuery(undefined, {
     enabled: isAdmin,
   });
 
@@ -187,14 +244,19 @@ export default function Admin() {
       price: values.price,
       category: values.category,
       subcategory:
-        values.category === "beverage" && values.subcategory ? values.subcategory : null,
+        values.category === "beverage" && values.subcategory
+          ? values.subcategory
+          : null,
       imageUrl: values.imageUrl || undefined,
       featured: values.featured,
       stock: values.stock === "" ? null : Number(values.stock),
     };
 
     if (editingDish) {
-      updateDish.mutate({ id: editingDish.id, ...payload });
+      updateDish.mutate({
+        id: editingDish.id,
+        ...payload,
+      });
     } else {
       createDish.mutate(payload);
     }
@@ -210,14 +272,22 @@ export default function Admin() {
 
   if (!isAdmin) return null;
 
-  const pendingCount = reservations?.filter((r) => r.status === "pending").length || 0;
-  const confirmedCount = reservations?.filter((r) => r.status === "confirmed").length || 0;
+  const pendingCount =
+    reservations?.filter((r) => r.status === "pending").length || 0;
+
+  const confirmedCount =
+    reservations?.filter((r) => r.status === "confirmed").length || 0;
 
   return (
     <main className="bg-table-dark min-h-screen pt-[72px]">
       <div className="max-w-[1200px] mx-auto px-6 lg:px-12 py-8">
-        <h1 className="font-display text-cream text-2xl mb-2">Admin Dashboard</h1>
-        <p className="text-cream/50 text-sm mb-8">Welcome back, {user?.name}</p>
+        <h1 className="font-display text-cream text-2xl mb-2">
+          Admin Dashboard
+        </h1>
+
+        <p className="text-cream/50 text-sm mb-8">
+          Welcome back, {user?.name}
+        </p>
 
         <Tabs defaultValue="overview">
           <TabsList className="mb-6 flex-wrap h-auto">
@@ -225,6 +295,7 @@ export default function Admin() {
             <TabsTrigger value="reservations">Reservations</TabsTrigger>
             <TabsTrigger value="orders">Orders</TabsTrigger>
             <TabsTrigger value="menu">Menu Management</TabsTrigger>
+            <TabsTrigger value="tables">Tables & QR Codes</TabsTrigger>
             <TabsTrigger value="reviews">Reviews</TabsTrigger>
           </TabsList>
 
@@ -233,55 +304,161 @@ export default function Admin() {
             {statsLoading || !stats ? (
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[...Array(4)].map((_, i) => (
-                  <div key={i} className="animate-pulse bg-table-mid rounded-lg h-24" />
+                  <div
+                    key={i}
+                    className="animate-pulse bg-table-mid rounded-lg h-24"
+                  />
                 ))}
               </div>
             ) : (
               <>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <StatCard icon={Eye} label="Total Visits" value={stats.totals.totalVisits} />
-                  <StatCard icon={ShoppingBag} label="Total Orders" value={stats.totals.totalOrders} />
-                  <StatCard icon={DollarSign} label="Total Revenue" value={`${stats.totals.totalRevenue} EGP`} />
-                  <StatCard icon={Calendar} label="Total Reservations" value={stats.totals.totalReservations} />
+                  <StatCard
+                    icon={Eye}
+                    label="Total Visits"
+                    value={stats.totals.totalVisits}
+                  />
+
+                  <StatCard
+                    icon={ShoppingBag}
+                    label="Total Orders"
+                    value={stats.totals.totalOrders}
+                  />
+
+                  <StatCard
+                    icon={DollarSign}
+                    label="Total Revenue"
+                    value={`${stats.totals.totalRevenue} EGP`}
+                  />
+
+                  <StatCard
+                    icon={Calendar}
+                    label="Total Reservations"
+                    value={stats.totals.totalReservations}
+                  />
                 </div>
 
                 <div className="bg-table-mid border border-gold-primary/10 rounded-lg p-5">
-                  <h3 className="text-cream font-display text-lg mb-4">Visitors (Last 14 Days)</h3>
+                  <h3 className="text-cream font-display text-lg mb-4">
+                    Visitors (Last 14 Days)
+                  </h3>
+
                   <ResponsiveContainer width="100%" height={250}>
                     <LineChart data={stats.visitsByDay}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#8B735530" />
-                      <XAxis dataKey="day" stroke="#F5F0E860" fontSize={12} />
-                      <YAxis stroke="#F5F0E860" fontSize={12} allowDecimals={false} />
-                      <Tooltip contentStyle={{ background: "#14141B", border: "1px solid #8B735530" }} />
-                      <Line type="monotone" dataKey="count" stroke="#C9A96E" strokeWidth={2} name="Visits" />
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="#8B735530"
+                      />
+
+                      <XAxis
+                        dataKey="day"
+                        stroke="#F5F0E860"
+                        fontSize={12}
+                      />
+
+                      <YAxis
+                        stroke="#F5F0E860"
+                        fontSize={12}
+                        allowDecimals={false}
+                      />
+
+                      <Tooltip
+                        contentStyle={{
+                          background: "#14141B",
+                          border: "1px solid #8B735530",
+                        }}
+                      />
+
+                      <Line
+                        type="monotone"
+                        dataKey="count"
+                        stroke="#C9A96E"
+                        strokeWidth={2}
+                        name="Visits"
+                      />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="bg-table-mid border border-gold-primary/10 rounded-lg p-5">
-                    <h3 className="text-cream font-display text-lg mb-4">Orders</h3>
+                    <h3 className="text-cream font-display text-lg mb-4">
+                      Orders
+                    </h3>
+
                     <ResponsiveContainer width="100%" height={220}>
                       <BarChart data={stats.ordersByDay}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#8B735530" />
-                        <XAxis dataKey="day" stroke="#F5F0E860" fontSize={11} />
-                        <YAxis stroke="#F5F0E860" fontSize={11} allowDecimals={false} />
-                        <Tooltip contentStyle={{ background: "#14141B", border: "1px solid #8B735530" }} />
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke="#8B735530"
+                        />
+
+                        <XAxis
+                          dataKey="day"
+                          stroke="#F5F0E860"
+                          fontSize={11}
+                        />
+
+                        <YAxis
+                          stroke="#F5F0E860"
+                          fontSize={11}
+                          allowDecimals={false}
+                        />
+
+                        <Tooltip
+                          contentStyle={{
+                            background: "#14141B",
+                            border: "1px solid #8B735530",
+                          }}
+                        />
+
                         <Legend />
-                        <Bar dataKey="count" fill="#C9A96E" name="Orders" />
+
+                        <Bar
+                          dataKey="count"
+                          fill="#C9A96E"
+                          name="Orders"
+                        />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
 
                   <div className="bg-table-mid border border-gold-primary/10 rounded-lg p-5">
-                    <h3 className="text-cream font-display text-lg mb-4">Reservations</h3>
+                    <h3 className="text-cream font-display text-lg mb-4">
+                      Reservations
+                    </h3>
+
                     <ResponsiveContainer width="100%" height={220}>
                       <BarChart data={stats.reservationsByDay}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#8B735530" />
-                        <XAxis dataKey="day" stroke="#F5F0E860" fontSize={11} />
-                        <YAxis stroke="#F5F0E860" fontSize={11} allowDecimals={false} />
-                        <Tooltip contentStyle={{ background: "#14141B", border: "1px solid #8B735530" }} />
-                        <Bar dataKey="count" fill="#8B7355" name="Reservations" />
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke="#8B735530"
+                        />
+
+                        <XAxis
+                          dataKey="day"
+                          stroke="#F5F0E860"
+                          fontSize={11}
+                        />
+
+                        <YAxis
+                          stroke="#F5F0E860"
+                          fontSize={11}
+                          allowDecimals={false}
+                        />
+
+                        <Tooltip
+                          contentStyle={{
+                            background: "#14141B",
+                            border: "1px solid #8B735530",
+                          }}
+                        />
+
+                        <Bar
+                          dataKey="count"
+                          fill="#8B7355"
+                          name="Reservations"
+                        />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -293,51 +470,126 @@ export default function Admin() {
           {/* Reservations */}
           <TabsContent value="reservations">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              <StatCard icon={Calendar} label="Total Reservations" value={reservations?.length || 0} />
-              <StatCard icon={Clock} label="Pending" value={pendingCount} />
-              <StatCard icon={CheckCircle} label="Confirmed" value={confirmedCount} />
+              <StatCard
+                icon={Calendar}
+                label="Total Reservations"
+                value={reservations?.length || 0}
+              />
+
+              <StatCard
+                icon={Clock}
+                label="Pending"
+                value={pendingCount}
+              />
+
+              <StatCard
+                icon={CheckCircle}
+                label="Confirmed"
+                value={confirmedCount}
+              />
+
               <StatCard
                 icon={Users}
                 label="Total Guests"
-                value={reservations?.reduce((sum, r) => sum + r.guests, 0) || 0}
+                value={
+                  reservations?.reduce(
+                    (sum, r) => sum + r.guests,
+                    0
+                  ) || 0
+                }
               />
             </div>
 
             <div className="bg-table-mid border border-gold-primary/10 rounded-lg overflow-hidden">
               <div className="px-5 py-4 border-b border-gold-primary/10 flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-gold-primary" />
-                <h2 className="font-display text-cream text-lg">Reservations</h2>
+                <h2 className="font-display text-cream text-lg">
+                  Reservations
+                </h2>
               </div>
 
               {reservationsLoading ? (
-                <div className="p-8 text-center text-cream/40">Loading...</div>
+                <div className="p-8 text-center text-cream/40">
+                  Loading...
+                </div>
               ) : reservations && reservations.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-gold-primary/10">
-                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Name</th>
-                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Date</th>
-                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Time</th>
-                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Guests</th>
-                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Status</th>
-                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Actions</th>
+                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">
+                          Name
+                        </th>
+                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">
+                          Date
+                        </th>
+                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">
+                          Time
+                        </th>
+                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">
+                          Guests
+                        </th>
+                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Table</th>
+                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">
+                          Actions
+                        </th>
                       </tr>
                     </thead>
+
                     <tbody>
                       {reservations.map((res) => (
-                        <tr key={res.id} className="border-b border-gold-primary/5 hover:bg-gold-primary/5 transition-colors">
+                        <tr
+                          key={res.id}
+                          className="border-b border-gold-primary/5 hover:bg-gold-primary/5 transition-colors"
+                        >
                           <td className="px-4 py-3">
-                            <p className="text-cream text-sm">{res.name}</p>
-                            <p className="text-cream/40 text-xs">{res.email}</p>
+                            <p className="text-cream text-sm">
+                              {res.name}
+                            </p>
+                            <p className="text-cream/40 text-xs">
+                              {res.email}
+                            </p>
                           </td>
+
                           <td className="px-4 py-3 text-cream/70 text-sm">
                             {new Date(res.date).toLocaleDateString()}
                           </td>
-                          <td className="px-4 py-3 text-cream/70 text-sm">{res.time}</td>
-                          <td className="px-4 py-3 text-cream/70 text-sm">{res.guests}</td>
+
+                          <td className="px-4 py-3 text-cream/70 text-sm">
+                            {res.time}
+                          </td>
+
+                          <td className="px-4 py-3 text-cream/70 text-sm">
+                            {res.guests}
+                          </td>
+
                           <td className="px-4 py-3">
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${reservationStatusColors[res.status]}`}>
+                            <select
+                              value={res.tableNumber ?? ""}
+                              onChange={(e) =>
+                                assignReservationTable.mutate({
+                                  id: res.id,
+                                  tableNumber: e.target.value || null,
+                                })
+                              }
+                              className="bg-table-dark border border-gold-primary/20 rounded px-2 py-1 text-cream text-xs"
+                            >
+                              <option value="">Unassigned</option>
+                              {allTables?.map((t) => (
+                                <option key={t.id} value={t.tableNumber}>
+                                  {t.tableNumber}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+
+                          <td className="px-4 py-3">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${reservationStatusColors[res.status]}`}
+                            >
                               {res.status === "confirmed" ? (
                                 <CheckCircle className="w-3 h-3" />
                               ) : res.status === "cancelled" ? (
@@ -345,21 +597,34 @@ export default function Admin() {
                               ) : (
                                 <Clock className="w-3 h-3" />
                               )}
+
                               {res.status}
                             </span>
                           </td>
+
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
                               {res.status === "pending" && (
                                 <>
                                   <button
-                                    onClick={() => updateReservationStatus.mutate({ id: res.id, status: "confirmed" })}
+                                    onClick={() =>
+                                      updateReservationStatus.mutate({
+                                        id: res.id,
+                                        status: "confirmed",
+                                      })
+                                    }
                                     className="px-3 py-1.5 bg-green-500/10 text-green-400 text-xs rounded hover:bg-green-500/20 transition-colors"
                                   >
                                     Confirm
                                   </button>
+
                                   <button
-                                    onClick={() => updateReservationStatus.mutate({ id: res.id, status: "cancelled" })}
+                                    onClick={() =>
+                                      updateReservationStatus.mutate({
+                                        id: res.id,
+                                        status: "cancelled",
+                                      })
+                                    }
                                     className="px-3 py-1.5 bg-red-500/10 text-red-400 text-xs rounded hover:bg-red-500/20 transition-colors"
                                   >
                                     Cancel
@@ -374,7 +639,9 @@ export default function Admin() {
                   </table>
                 </div>
               ) : (
-                <div className="p-8 text-center text-cream/40">No reservations yet.</div>
+                <div className="p-8 text-center text-cream/40">
+                  No reservations yet.
+                </div>
               )}
             </div>
           </TabsContent>
@@ -384,38 +651,74 @@ export default function Admin() {
             <div className="bg-table-mid border border-gold-primary/10 rounded-lg overflow-hidden">
               <div className="px-5 py-4 border-b border-gold-primary/10 flex items-center gap-2">
                 <ShoppingBag className="w-4 h-4 text-gold-primary" />
-                <h2 className="font-display text-cream text-lg">Orders</h2>
+
+                <h2 className="font-display text-cream text-lg">
+                  Orders
+                </h2>
               </div>
 
               {ordersLoading ? (
-                <div className="p-8 text-center text-cream/40">Loading...</div>
+                <div className="p-8 text-center text-cream/40">
+                  Loading...
+                </div>
               ) : orders && orders.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-gold-primary/10">
-                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Order</th>
-                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Customer</th>
-                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Items</th>
-                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Address</th>
-                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Total</th>
-                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Status</th>
+                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">
+                          Order
+                        </th>
+                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">
+                          Customer
+                        </th>
+                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">
+                          Items
+                        </th>
+                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">
+                          Address
+                        </th>
+                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">
+                          Total
+                        </th>
+                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">
+                          Status
+                        </th>
                       </tr>
                     </thead>
+
                     <tbody>
                       {orders.map((order) => (
-                        <tr key={order.id} className="border-b border-gold-primary/5 hover:bg-gold-primary/5 transition-colors align-top">
+                        <tr
+                          key={order.id}
+                          className="border-b border-gold-primary/5 hover:bg-gold-primary/5 transition-colors align-top"
+                        >
                           <td className="px-4 py-3">
-                            <p className="text-cream text-sm">#{order.id}</p>
+                            <p className="text-cream text-sm">
+                              #{order.id}
+                            </p>
+
                             <p className="text-cream/40 text-xs">
-                              {new Date(order.createdAt).toLocaleDateString()}
+                              {new Date(
+                                order.createdAt
+                              ).toLocaleDateString()}
                             </p>
                           </td>
+
                           <td className="px-4 py-3">
-                            <p className="text-cream text-sm">{order.customerName || "—"}</p>
-                            <p className="text-cream/40 text-xs">{order.customerEmail}</p>
-                            <p className="text-cream/40 text-xs">{order.phone}</p>
+                            <p className="text-cream text-sm">
+                              {order.customerName || "—"}
+                            </p>
+
+                            <p className="text-cream/40 text-xs">
+                              {order.customerEmail}
+                            </p>
+
+                            <p className="text-cream/40 text-xs">
+                              {order.phone}
+                            </p>
                           </td>
+
                           <td className="px-4 py-3 text-cream/70 text-xs space-y-0.5">
                             {order.items.map((item) => (
                               <p key={item.id}>
@@ -423,30 +726,56 @@ export default function Admin() {
                               </p>
                             ))}
                           </td>
+
                           <td className="px-4 py-3 text-cream/60 text-xs max-w-[160px]">
                             {order.address}, {order.city}
                           </td>
-                          <td className="px-4 py-3 text-gold-primary text-sm">{order.totalAmount} EGP</td>
+
+                          <td className="px-4 py-3 text-gold-primary text-sm">
+                            {order.totalAmount} EGP
+                          </td>
+
                           <td className="px-4 py-3">
                             <Select
                               value={order.status}
                               onValueChange={(status) =>
                                 updateOrderStatus.mutate({
                                   id: order.id,
-                                  status: status as typeof order.status,
+                                  status:
+                                    status as typeof order.status,
                                 })
                               }
                             >
-                              <SelectTrigger className={`w-36 text-xs ${orderStatusColors[order.status]}`}>
+                              <SelectTrigger
+                                className={`w-36 text-xs ${orderStatusColors[order.status]}`}
+                              >
                                 <SelectValue />
                               </SelectTrigger>
+
                               <SelectContent>
-                                <SelectItem value="pending">Pending</SelectItem>
-                                <SelectItem value="paid">Paid</SelectItem>
-                                <SelectItem value="preparing">Preparing</SelectItem>
-                                <SelectItem value="delivered">Delivered</SelectItem>
-                                <SelectItem value="failed">Failed</SelectItem>
-                                <SelectItem value="cancelled">Cancelled</SelectItem>
+                                <SelectItem value="pending">
+                                  Pending
+                                </SelectItem>
+
+                                <SelectItem value="paid">
+                                  Paid
+                                </SelectItem>
+
+                                <SelectItem value="preparing">
+                                  Preparing
+                                </SelectItem>
+
+                                <SelectItem value="delivered">
+                                  Delivered
+                                </SelectItem>
+
+                                <SelectItem value="failed">
+                                  Failed
+                                </SelectItem>
+
+                                <SelectItem value="cancelled">
+                                  Cancelled
+                                </SelectItem>
                               </SelectContent>
                             </Select>
                           </td>
@@ -456,7 +785,9 @@ export default function Admin() {
                   </table>
                 </div>
               ) : (
-                <div className="p-8 text-center text-cream/40">No orders yet.</div>
+                <div className="p-8 text-center text-cream/40">
+                  No orders yet.
+                </div>
               )}
             </div>
           </TabsContent>
@@ -467,8 +798,12 @@ export default function Admin() {
               <div className="px-5 py-4 border-b border-gold-primary/10 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Utensils className="w-4 h-4 text-gold-primary" />
-                  <h2 className="font-display text-cream text-lg">Menu Items</h2>
+
+                  <h2 className="font-display text-cream text-lg">
+                    Menu Items
+                  </h2>
                 </div>
+
                 <Button size="sm" onClick={openAddDish}>
                   <Plus className="w-4 h-4" />
                   Add Dish
@@ -476,71 +811,127 @@ export default function Admin() {
               </div>
 
               {dishesLoading ? (
-                <div className="p-8 text-center text-cream/40">Loading...</div>
+                <div className="p-8 text-center text-cream/40">
+                  Loading...
+                </div>
               ) : allDishes && allDishes.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-gold-primary/10">
-                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Name</th>
-                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Arabic Name</th>
-                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Category</th>
-                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Type</th>
-                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Price</th>
-                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Stock</th>
-                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Featured</th>
-                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">Actions</th>
+                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">
+                          Name
+                        </th>
+                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">
+                          Arabic Name
+                        </th>
+                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">
+                          Category
+                        </th>
+                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">
+                          Type
+                        </th>
+                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">
+                          Price
+                        </th>
+                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">
+                          Stock
+                        </th>
+                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">
+                          Featured
+                        </th>
+                        <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">
+                          Actions
+                        </th>
                       </tr>
                     </thead>
+
                     <tbody>
                       {allDishes.map((dish) => (
-                        <tr key={dish.id} className="border-b border-gold-primary/5 hover:bg-gold-primary/5 transition-colors">
-                          <td className="px-4 py-3 text-cream text-sm">{dish.name}</td>
-                          <td className="px-4 py-3 text-cream/70 text-sm" dir="rtl">
-                            {dish.nameAr || <span className="text-cream/30" dir="ltr">—</span>}
+                        <tr
+                          key={dish.id}
+                          className="border-b border-gold-primary/5 hover:bg-gold-primary/5 transition-colors"
+                        >
+                          <td className="px-4 py-3 text-cream text-sm">
+                            {dish.name}
                           </td>
+
+                          <td
+                            className="px-4 py-3 text-cream/70 text-sm"
+                            dir="rtl"
+                          >
+                            {dish.nameAr || (
+                              <span className="text-cream/30" dir="ltr">
+                                —
+                              </span>
+                            )}
+                          </td>
+
                           <td className="px-4 py-3">
                             <span className="px-2.5 py-1 text-xs capitalize bg-gold-primary/10 text-gold-primary rounded-full">
                               {dish.category}
                             </span>
                           </td>
+
                           <td className="px-4 py-3">
-                            {dish.category === "beverage" && dish.subcategory ? (
+                            {dish.category === "beverage" &&
+                              dish.subcategory ? (
                               <span className="px-2.5 py-1 text-xs capitalize bg-cream/10 text-cream/70 rounded-full">
                                 {dish.subcategory}
                               </span>
                             ) : (
-                              <span className="text-cream/30 text-xs">—</span>
+                              <span className="text-cream/30 text-xs">
+                                —
+                              </span>
                             )}
                           </td>
-                          <td className="px-4 py-3 text-gold-primary text-sm">{dish.price} EGP</td>
+
+                          <td className="px-4 py-3 text-gold-primary text-sm">
+                            {dish.price} EGP
+                          </td>
+
                           <td className="px-4 py-3 text-sm">
                             {dish.stock === null ? (
-                              <span className="text-cream/30">Unlimited</span>
+                              <span className="text-cream/30">
+                                Unlimited
+                              </span>
                             ) : dish.stock <= 0 ? (
-                              <span className="text-red-400">Out of stock</span>
+                              <span className="text-red-400">
+                                Out of stock
+                              </span>
                             ) : (
-                              <span className="text-cream/70">{dish.stock}</span>
+                              <span className="text-cream/70">
+                                {dish.stock}
+                              </span>
                             )}
                           </td>
+
                           <td className="px-4 py-3">
                             {dish.featured ? (
                               <CheckCircle className="w-4 h-4 text-green-400" />
                             ) : (
-                              <span className="text-cream/30 text-xs">—</span>
+                              <span className="text-cream/30 text-xs">
+                                —
+                              </span>
                             )}
                           </td>
+
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
                               <button
-                                onClick={() => openEditDish(dish)}
+                                onClick={() =>
+                                  openEditDish(dish)
+                                }
                                 className="p-1.5 text-cream/60 hover:text-gold-primary hover:bg-gold-primary/10 rounded transition-colors"
                                 aria-label={`Edit ${dish.name}`}
                               >
                                 <Pencil className="w-3.5 h-3.5" />
                               </button>
+
                               <button
-                                onClick={() => setDeleteTarget(dish)}
+                                onClick={() =>
+                                  setDeleteTarget(dish)
+                                }
                                 className="p-1.5 text-cream/60 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
                                 aria-label={`Delete ${dish.name}`}
                               >
@@ -555,10 +946,136 @@ export default function Admin() {
                 </div>
               ) : (
                 <div className="p-8 text-center text-cream/40">
-                  No menu items yet. Click &quot;Add Dish&quot; to create one.
+                  No menu items yet. Click &quot;Add Dish&quot; to
+                  create one.
                 </div>
               )}
             </div>
+          </TabsContent>
+
+          {/* Tables & QR Codes */}
+          <TabsContent value="tables">
+            <div className="bg-table-mid border border-gold-primary/10 rounded-lg p-5 mb-6 flex items-end gap-3">
+              <div className="flex-1">
+                <label className="text-cream/60 text-sm mb-1.5 block">
+                  New table number
+                </label>
+
+                <Input
+                  value={newTableNumber}
+                  onChange={(e) =>
+                    setNewTableNumber(e.target.value)
+                  }
+                  placeholder="e.g. 12"
+                />
+              </div>
+
+              <Button
+                onClick={() =>
+                  newTableNumber.trim() &&
+                  createTable.mutate({
+                    tableNumber: newTableNumber.trim(),
+                  })
+                }
+                disabled={createTable.isPending}
+              >
+                <Plus className="w-4 h-4" />
+                Add Table
+              </Button>
+            </div>
+
+            {tablesLoading ? (
+              <div className="p-8 text-center text-cream/40">
+                Loading...
+              </div>
+            ) : allTables && allTables.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {allTables.map((table) => (
+                  <div
+                    key={table.id}
+                    className="bg-table-mid border border-gold-primary/10 rounded-lg p-5"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-cream font-display text-lg">
+                        Table {table.tableNumber}
+                      </h3>
+
+                      <button
+                        onClick={() =>
+                          deleteTable.mutate({
+                            id: table.id,
+                          })
+                        }
+                        className="p-1.5 text-cream/60 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                        aria-label={`Delete table ${table.tableNumber}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <div className="space-y-3 mb-4">
+                      {table.qrCodes.length === 0 && (
+                        <p className="text-cream/40 text-xs">
+                          No QR codes yet.
+                        </p>
+                      )}
+
+                      {table.qrCodes.map((qr) => {
+                        const url = `${window.location.origin}/table/${qr.code}`;
+
+                        return (
+                          <div
+                            key={qr.id}
+                            className="flex items-center gap-3"
+                          >
+                            <img
+                              src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(
+                                url
+                              )}`}
+                              alt={`QR code for table ${table.tableNumber}`}
+                              className="w-16 h-16 rounded bg-white p-1"
+                            />
+
+                            <div className="min-w-0">
+                              <p className="text-cream/70 text-xs truncate">
+                                {qr.label || "Unlabeled"}
+                              </p>
+
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-gold-primary text-xs underline underline-offset-2 break-all"
+                              >
+                                {url}
+                              </a>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        addQrCode.mutate({
+                          tableId: table.id,
+                        })
+                      }
+                      disabled={addQrCode.isPending}
+                    >
+                      <QrCode className="w-4 h-4" />
+                      Generate QR Code
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-8 text-center text-cream/40">
+                No tables yet. Add one above.
+              </div>
+            )}
           </TabsContent>
 
           {/* Reviews */}
@@ -566,36 +1083,58 @@ export default function Admin() {
             <div className="bg-table-mid border border-gold-primary/10 rounded-lg overflow-hidden">
               <div className="px-5 py-4 border-b border-gold-primary/10 flex items-center gap-2">
                 <Star className="w-4 h-4 text-gold-primary" />
-                <h2 className="font-display text-cream text-lg">Customer Reviews</h2>
+
+                <h2 className="font-display text-cream text-lg">
+                  Customer Reviews
+                </h2>
               </div>
 
               {reviewsLoading ? (
-                <div className="p-8 text-center text-cream/40">Loading...</div>
+                <div className="p-8 text-center text-cream/40">
+                  Loading...
+                </div>
               ) : reviews && reviews.length > 0 ? (
                 <div className="divide-y divide-gold-primary/5">
                   {reviews.map((review) => (
                     <div key={review.id} className="px-5 py-4">
                       <div className="flex items-center justify-between mb-1">
-                        <p className="text-cream text-sm">{review.userName || "Guest"}</p>
+                        <p className="text-cream text-sm">
+                          {review.userName || "Guest"}
+                        </p>
+
                         <div className="flex items-center gap-0.5">
                           {[1, 2, 3, 4, 5].map((n) => (
                             <Star
                               key={n}
                               size={14}
-                              className={n <= review.rating ? "fill-gold-primary text-gold-primary" : "text-cream/20"}
+                              className={
+                                n <= review.rating
+                                  ? "fill-gold-primary text-gold-primary"
+                                  : "text-cream/20"
+                              }
                             />
                           ))}
                         </div>
                       </div>
-                      {review.comment && <p className="text-cream/60 text-sm">{review.comment}</p>}
+
+                      {review.comment && (
+                        <p className="text-cream/60 text-sm">
+                          {review.comment}
+                        </p>
+                      )}
+
                       <p className="text-cream/30 text-xs mt-1">
-                        {new Date(review.createdAt).toLocaleDateString()}
+                        {new Date(
+                          review.createdAt
+                        ).toLocaleDateString()}
                       </p>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="p-8 text-center text-cream/40">No reviews yet.</div>
+                <div className="p-8 text-center text-cream/40">
+                  No reviews yet.
+                </div>
               )}
             </div>
           </TabsContent>
@@ -607,21 +1146,39 @@ export default function Admin() {
         onOpenChange={setDishDialogOpen}
         dish={editingDish}
         onSubmit={handleDishSubmit}
-        isSubmitting={createDish.isPending || updateDish.isPending}
+        isSubmitting={
+          createDish.isPending || updateDish.isPending
+        }
       />
 
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) =>
+          !open && setDeleteTarget(null)
+        }
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete &quot;{deleteTarget?.name}&quot;?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Delete &quot;{deleteTarget?.name}&quot;?
+            </AlertDialogTitle>
+
             <AlertDialogDescription>
-              This will permanently remove this dish from the menu. This action cannot be undone.
+              This will permanently remove this dish from the
+              menu. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
+
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
+
             <AlertDialogAction
-              onClick={() => deleteTarget && deleteDish.mutate({ id: deleteTarget.id })}
+              onClick={() =>
+                deleteTarget &&
+                deleteDish.mutate({
+                  id: deleteTarget.id,
+                })
+              }
               className="bg-destructive text-white hover:bg-destructive/90"
             >
               Delete
@@ -632,3 +1189,4 @@ export default function Admin() {
     </main>
   );
 }
+

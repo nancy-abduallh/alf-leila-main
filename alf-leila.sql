@@ -1,16 +1,10 @@
--- phpMyAdmin SQL Dump
--- version 5.2.1
--- https://www.phpmyadmin.net/
---
--- Host: 127.0.0.1:3307
--- Generation Time: Aug 23, 2026 at 06:34 AM
+-- phpMyAdmin-style SQL Dump
+-- Regenerated to match schema.ts (adds dine-in QR ordering tables + order/reservation fields)
 -- Server version: 10.4.28-MariaDB
--- PHP Version: 8.3.11
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
-
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -75,21 +69,75 @@ INSERT INTO `dishes` (`id`, `name`, `nameAr`, `description`, `descriptionAr`, `p
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `tables`
+-- Physical restaurant tables, used by the dine-in QR ordering flow.
+--
+
+CREATE TABLE `tables` (
+  `id` int(11) NOT NULL,
+  `tableNumber` varchar(20) NOT NULL,
+  `seats` int(11) DEFAULT NULL,
+  `createdAt` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `table_qr_codes`
+-- Every printed QR code resolves to a tableId; a table can have several codes.
+--
+
+CREATE TABLE `table_qr_codes` (
+  `id` int(11) NOT NULL,
+  `tableId` int(11) NOT NULL,
+  `code` varchar(64) NOT NULL,
+  `label` varchar(50) DEFAULT NULL,
+  `createdAt` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `table_order_batches`
+-- One row per table sitting; groups orders placed within the 5-minute edit
+-- window into a single ticket for the kitchen.
+--
+
+CREATE TABLE `table_order_batches` (
+  `id` int(11) NOT NULL,
+  `tableId` int(11) NOT NULL,
+  `tableNumber` varchar(20) NOT NULL,
+  `status` enum('open','sent_to_kitchen','cancelled') NOT NULL DEFAULT 'open',
+  `opensAt` timestamp NOT NULL DEFAULT current_timestamp(),
+  `sendAt` timestamp NOT NULL DEFAULT current_timestamp(),
+  `sentAt` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `orders`
+-- Adds dine-in support: orderSource, tableId/tableNumber/batchId, editableUntil.
+-- phone/address/city are now nullable since dine-in orders don't use them.
 --
 
 CREATE TABLE `orders` (
   `id` int(11) NOT NULL,
   `userId` int(11) NOT NULL,
-  `status` enum('pending','paid','preparing','delivered','failed','cancelled') NOT NULL DEFAULT 'pending',
+  `status` enum('pending_edit','pending','paid','preparing','delivered','failed','cancelled') NOT NULL DEFAULT 'pending',
+  `orderSource` enum('delivery','dine_in') NOT NULL DEFAULT 'delivery',
   `totalAmount` decimal(10,2) NOT NULL,
-  `phone` varchar(20) NOT NULL,
-  `address` varchar(255) NOT NULL,
-  `city` varchar(100) NOT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `address` varchar(255) DEFAULT NULL,
+  `city` varchar(100) DEFAULT NULL,
   `notes` text DEFAULT NULL,
   `paymobOrderId` varchar(64) DEFAULT NULL,
+  `tableId` int(11) DEFAULT NULL,
+  `tableNumber` varchar(20) DEFAULT NULL,
+  `batchId` int(11) DEFAULT NULL,
+  `editableUntil` datetime DEFAULT NULL,
   `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updatedAt` timestamp NOT NULL DEFAULT current_timestamp()
+  `updatedAt` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -280,6 +328,7 @@ INSERT INTO `page_views` (`id`, `path`, `createdAt`) VALUES
 
 --
 -- Table structure for table `reservations`
+-- Adds preferredArea (customer request) and tableNumber (staff assignment).
 --
 
 CREATE TABLE `reservations` (
@@ -292,6 +341,8 @@ CREATE TABLE `reservations` (
   `time` time NOT NULL,
   `guests` int(11) NOT NULL,
   `notes` text DEFAULT NULL,
+  `preferredArea` varchar(100) DEFAULT NULL,
+  `tableNumber` varchar(20) DEFAULT NULL,
   `status` enum('pending','confirmed','cancelled') NOT NULL DEFAULT 'pending',
   `createdAt` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -341,45 +392,35 @@ INSERT INTO `users` (`id`, `email`, `passwordHash`, `name`, `avatar`, `role`, `c
 -- Indexes for dumped tables
 --
 
---
--- Indexes for table `dishes`
---
 ALTER TABLE `dishes`
   ADD PRIMARY KEY (`id`);
 
---
--- Indexes for table `orders`
---
+ALTER TABLE `tables`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `tables_tableNumber_unique` (`tableNumber`);
+
+ALTER TABLE `table_qr_codes`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `table_qr_codes_code_unique` (`code`);
+
+ALTER TABLE `table_order_batches`
+  ADD PRIMARY KEY (`id`);
+
 ALTER TABLE `orders`
   ADD PRIMARY KEY (`id`);
 
---
--- Indexes for table `order_items`
---
 ALTER TABLE `order_items`
   ADD PRIMARY KEY (`id`);
 
---
--- Indexes for table `page_views`
---
 ALTER TABLE `page_views`
   ADD PRIMARY KEY (`id`);
 
---
--- Indexes for table `reservations`
---
 ALTER TABLE `reservations`
   ADD PRIMARY KEY (`id`);
 
---
--- Indexes for table `reviews`
---
 ALTER TABLE `reviews`
   ADD PRIMARY KEY (`id`);
 
---
--- Indexes for table `users`
---
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `users_email_unique` (`email`);
@@ -388,47 +429,36 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for dumped tables
 --
 
---
--- AUTO_INCREMENT for table `dishes`
---
 ALTER TABLE `dishes`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
---
--- AUTO_INCREMENT for table `orders`
---
+ALTER TABLE `tables`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `table_qr_codes`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `table_order_batches`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
 ALTER TABLE `orders`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
---
--- AUTO_INCREMENT for table `order_items`
---
 ALTER TABLE `order_items`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=40;
 
---
--- AUTO_INCREMENT for table `page_views`
---
 ALTER TABLE `page_views`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=152;
 
---
--- AUTO_INCREMENT for table `reservations`
---
 ALTER TABLE `reservations`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
---
--- AUTO_INCREMENT for table `reviews`
---
 ALTER TABLE `reviews`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
---
--- AUTO_INCREMENT for table `users`
---
 ALTER TABLE `users`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

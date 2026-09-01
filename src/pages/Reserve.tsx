@@ -16,6 +16,7 @@ export default function Reserve() {
     time: "",
     guests: 2,
     notes: "",
+    preferredArea: "",
   });
   const [submitted, setSubmitted] = useState(false);
 
@@ -196,6 +197,21 @@ export default function Reserve() {
                 onChange={handleChange}
                 className="w-full px-4 py-3 bg-table-mid border border-gold-primary/20 rounded-lg text-cream text-sm placeholder:text-cream/30 focus:outline-none focus:border-gold-primary transition-colors resize-none"
                 placeholder={t("reservePage.notesPlaceholder")}
+              />
+            </div>
+
+            <div>
+              <label className="flex items-center gap-2 text-cream/70 text-sm mb-2">
+                <MessageSquare className="w-4 h-4 text-gold-primary" />
+                Preferred Area (optional)
+              </label>
+              <input
+                type="text"
+                name="preferredArea"
+                value={formData.preferredArea}
+                onChange={handleChange}
+                className="w-full px-4 py-3 bg-table-mid border border-gold-primary/20 rounded-lg text-cream text-sm placeholder:text-cream/30 focus:outline-none focus:border-gold-primary transition-colors"
+                placeholder="e.g. Window seat, outdoor terrace, near the stage..."
               />
             </div>
 
