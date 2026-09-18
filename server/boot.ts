@@ -6,7 +6,6 @@ import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { sql } from "drizzle-orm";
 import { appRouter } from "./router";
 import { createContext } from "./context";
-import { handlePaymobWebhook } from "./webhooks/paymob";
 import { getDb, withTimeout, resetDb } from "./queries/connection";
 import { dishes } from "@db/schema";
 import { startBatchProcessor } from "./lib/batchProcessor";
@@ -41,8 +40,6 @@ app.get("/api/health", async (c) => {
     );
   }
 });
-
-app.post("/api/webhooks/paymob", handlePaymobWebhook);
 
 app.use("/api/trpc/*", async (c) => {
   return fetchRequestHandler({

@@ -1,18 +1,21 @@
+import { Link } from "react-router";
 import { trpc } from "../providers/trpc";
 import { useLanguage } from "../providers/language";
-import { Package } from "lucide-react";
+import { Package, Pencil } from "lucide-react";
 
 const statusColors: Record<string, string> = {
+    pending_edit: "bg-yellow-500/10 text-yellow-400",
     pending: "bg-yellow-500/10 text-yellow-400",
-    paid: "bg-blue-500/10 text-blue-400",
     preparing: "bg-orange-500/10 text-orange-400",
-    delivered: "bg-green-500/10 text-green-400",
-    failed: "bg-red-500/10 text-red-400",
+    ready: "bg-blue-500/10 text-blue-400",
+    served: "bg-green-500/10 text-green-400",
     cancelled: "bg-red-500/10 text-red-400",
 };
 
 export default function MyOrders() {
-    const { data: orders, isLoading } = trpc.order.myOrders.useQuery();
+    const { data: orders, isLoading } = trpc.order.myOrders.useQuery(undefined, {
+        refetchInterval: 10000,
+    });
     const { t } = useLanguage();
 
     return (
@@ -29,13 +32,25 @@ export default function MyOrders() {
                 ) : orders && orders.length > 0 ? (
                     <div className="space-y-4">
                         {orders.map((order) => (
-                            <div key={order.id} className="bg-table-mid border border-gold-primary/10 rounded-lg p-5">
+                            <div
+                                key={order.id}
+                                className="bg-table-mid border border-gold-primary/10 rounded-lg p-5"
+                            >
                                 <div className="flex items-center justify-between mb-3">
-                                    <p className="text-cream font-medium">Order #{order.id}</p>
-                                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${statusColors[order.status]}`}>
+                                    <div>
+                                        <p className="text-cream font-medium">Order #{order.id}</p>
+                                        <p className="text-gold-primary/80 text-xs mt-0.5">
+                                            Table {order.tableNumber} &middot; ticket #{order.batchId}
+                                        </p>
+                                    </div>
+
+                                    <span
+                                        className={`px-2.5 py-1 rounded-full text-xs font-medium ${statusColors[order.status] ?? "bg-cream/10 text-cream/60"}`}
+                                    >
                                         {t(`statuses.${order.status}`)}
                                     </span>
                                 </div>
+
                                 <div className="space-y-1 mb-3">
                                     {order.items.map((item) => (
                                         <p key={item.id} className="text-cream/60 text-sm">
@@ -43,12 +58,25 @@ export default function MyOrders() {
                                         </p>
                                     ))}
                                 </div>
+
                                 <div className="flex items-center justify-between text-sm border-t border-gold-primary/10 pt-3">
                                     <span className="text-cream/40">
-                                        {new Date(order.createdAt).toLocaleDateString()}
+                                        {new Date(order.createdAt).toLocaleString()}
                                     </span>
-                                    <span className="text-gold-primary font-medium">{order.totalAmount} EGP</span>
+                                    <span className="text-gold-primary font-medium">
+                                        {order.totalAmount} EGP
+                                    </span>
                                 </div>
+
+                                {order.status === "pending_edit" && (
+                                    <Link
+                                        to={`/order/pending/${order.id}`}
+                                        className="inline-flex items-center gap-1.5 mt-4 px-3 py-2 bg-gold-primary text-table-dark text-xs font-medium rounded-full hover:bg-cream transition-colors"
+                                    >
+                                        <Pencil className="w-3.5 h-3.5" />
+                                        Still editable — change it
+                                    </Link>
+                                )}
                             </div>
                         ))}
                     </div>

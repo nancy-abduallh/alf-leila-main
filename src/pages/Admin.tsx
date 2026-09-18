@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../hooks/useAuth";
 import { trpc } from "../providers/trpc";
+import KitchenBoard from "../components/admin/KitchenBoard";
 import {
   CheckCircle,
   XCircle,
@@ -294,6 +295,7 @@ export default function Admin() {
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="reservations">Reservations</TabsTrigger>
             <TabsTrigger value="orders">Orders</TabsTrigger>
+            <TabsTrigger value="kitchen">Kitchen</TabsTrigger>
             <TabsTrigger value="menu">Menu Management</TabsTrigger>
             <TabsTrigger value="tables">Tables & QR Codes</TabsTrigger>
             <TabsTrigger value="reviews">Reviews</TabsTrigger>
@@ -790,6 +792,10 @@ export default function Admin() {
                 </div>
               )}
             </div>
+          </TabsContent>
+          {/* Kitchen & waiter board */}
+          <TabsContent value="kitchen">
+            <KitchenBoard />
           </TabsContent>
 
           {/* Menu Management */}

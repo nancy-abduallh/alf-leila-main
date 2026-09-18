@@ -278,15 +278,15 @@ export const orderRouter = createRouter({
         }));
     }),
 
-    // Kitchen display: only batches that have actually been sent, grouped
-    // by table so staff prepare a whole table at once.
+    // Kitchen display. Shows tables whose window is still counting down *and*
+    // tables already sent, so the line can see what's coming.
     kitchenQueue: adminQuery.query(async () => {
         const db = getDb();
         const batches = await db
             .select()
             .from(tableOrderBatches)
-            .where(eq(tableOrderBatches.status, "sent_to_kitchen"))
-            .orderBy(desc(tableOrderBatches.sentAt));
+            .where(inArray(tableOrderBatches.status, ["open", "sent_to_kitchen"]))
+            .orderBy(desc(tableOrderBatches.opensAt));
 
         if (batches.length === 0) return [];
 
@@ -297,19 +297,92 @@ export const orderRouter = createRouter({
             ? await db.select().from(orderItems).where(inArray(orderItems.orderId, orderIds))
             : [];
 
-        return batches.map((b) => ({
-            ...b,
-            orders: batchOrders
-                .filter((o) => o.batchId === b.id)
-                .map((o) => ({ ...o, items: items.filter((i) => i.orderId === o.id) })),
-        }));
+        return batches
+            .map((b) => {
+                const own = batchOrders.filter((o) => o.batchId === b.id);
+                const ownItems = own.flatMap((o) => items.filter((i) => i.orderId === o.id));
+
+                // One merged list per table — what the line actually cooks.
+                const merged = new Map<string, { dishName: string; quantity: number }>();
+                for (const item of ownItems) {
+                    const row = merged.get(item.dishName) ?? { dishName: item.dishName, quantity: 0 };
+                    row.quantity += item.quantity;
+                    merged.set(item.dishName, row);
+                }
+
+                return {
+                    ...b,
+                    orders: own.map((o) => ({
+                        ...o,
+                        items: items.filter((i) => i.orderId === o.id),
+                    })),
+                    combinedItems: [...merged.values()],
+                };
+            })
+            .filter(
+                (b) =>
+                    b.orders.length > 0 &&
+                    b.orders.some((o) => o.status !== "served" && o.status !== "cancelled"),
+            );
     }),
 
-    updateStatus: adminQuery
-        .input(z.object({ id: z.number(), status: orderStatusEnum }))
+    // Staff can pull a table's ticket forward instead of waiting out the
+    // timer — e.g. the diners say they're done ordering.
+    sendBatchNow: adminQuery
+        .input(z.object({ batchId: z.number() }))
         .mutation(async ({ input }) => {
             const db = getDb();
-            await db.update(orders).set({ status: input.status }).where(eq(orders.id, input.id));
+            const [batch] = await db
+                .select()
+                .from(tableOrderBatches)
+                .where(eq(tableOrderBatches.id, input.batchId));
+
+            if (!batch) throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" });
+            if (batch.status !== "open") {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "This ticket has already gone to the kitchen.",
+                });
+            }
+
+            const now = new Date();
+            await db
+                .update(tableOrderBatches)
+                .set({ status: "sent_to_kitchen", sentAt: now, sendAt: now })
+                .where(eq(tableOrderBatches.id, input.batchId));
+
+            await db
+                .update(orders)
+                .set({ status: "preparing" })
+                .where(eq(orders.batchId, input.batchId));
+
+            return { success: true };
+        }),
+
+    // Moves a whole table at once — the point of batching. One table is
+    // cooked, plated and carried out together.
+    updateBatchStatus: adminQuery
+        .input(
+            z.object({
+                batchId: z.number(),
+                status: z.enum(["preparing", "ready", "served", "cancelled"]),
+            }),
+        )
+        .mutation(async ({ input }) => {
+            const db = getDb();
+
+            await db
+                .update(orders)
+                .set({ status: input.status })
+                .where(eq(orders.batchId, input.batchId));
+
+            if (input.status === "cancelled") {
+                await db
+                    .update(tableOrderBatches)
+                    .set({ status: "cancelled" })
+                    .where(eq(tableOrderBatches.id, input.batchId));
+            }
+
             return { success: true };
         }),
 });
