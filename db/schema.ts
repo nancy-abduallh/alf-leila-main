@@ -96,34 +96,29 @@ export const tableOrderBatches = mysqlTable("table_order_batches", {
   sentAt: datetime("sentAt"),
 });
 
+// All orders are dine-in via QR code scan. No delivery.
+// Flow: pending_edit → pending → preparing → ready → served | cancelled
 export const orders = mysqlTable("orders", {
   id: int("id").primaryKey().autoincrement(),
   userId: int("userId").notNull(),
   status: mysqlEnum("status", [
-    "pending_edit", // dine-in only: still inside the 5-minute edit window
-    "pending",
-    "paid",
-    "preparing",
-    "delivered",
-    "failed",
+    "pending_edit", // still inside the 5-minute edit window
+    "pending",      // edit window closed, waiting for kitchen to start
+    "preparing",    // kitchen is preparing the order
+    "ready",        // kitchen done, waiter picks up
+    "served",       // waiter delivered to the table
     "cancelled",
   ])
     .default("pending")
     .notNull(),
-  orderSource: mysqlEnum("orderSource", ["delivery", "dine_in"]).default("delivery").notNull(),
   totalAmount: decimal("totalAmount", { precision: 10, scale: 2 }).notNull(),
-  // Delivery-only fields — null for dine-in orders.
-  phone: varchar("phone", { length: 20 }),
-  address: varchar("address", { length: 255 }),
-  city: varchar("city", { length: 100 }),
   notes: text("notes"),
-  paymobOrderId: varchar("paymobOrderId", { length: 64 }),
-  // Dine-in-only fields — null for delivery orders.
-  tableId: int("tableId"),
-  tableNumber: varchar("tableNumber", { length: 20 }),
-  batchId: int("batchId"),
+  // Dine-in fields — every order is tied to a table.
+  tableId: int("tableId").notNull(),
+  tableNumber: varchar("tableNumber", { length: 20 }).notNull(),
+  batchId: int("batchId").notNull(),
   // datetime, same reasoning as tableOrderBatches.sentAt above.
-  editableUntil: datetime("editableUntil"),
+  editableUntil: datetime("editableUntil").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt")
     .defaultNow()

@@ -1,20 +1,18 @@
-// api/order-router.ts
+// server/order-router.ts
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { eq, desc, and, inArray } from "drizzle-orm";
 import { createRouter, authedQuery, adminQuery } from "./middleware";
 import { getDb } from "./queries/connection";
 import { orders, orderItems, dishes, users, tables, tableOrderBatches } from "@db/schema";
-import { initiatePaymobPayment } from "./lib/paymob";
 import { TableOrdering } from "@contracts/constants";
 
 const orderStatusEnum = z.enum([
     "pending_edit",
     "pending",
-    "paid",
     "preparing",
-    "delivered",
-    "failed",
+    "ready",
+    "served",
     "cancelled",
 ]);
 
@@ -23,22 +21,12 @@ const orderItemInput = z.object({
     quantity: z.number().min(1).max(50),
 });
 
-const createOrderInput = z.discriminatedUnion("orderSource", [
-    z.object({
-        orderSource: z.literal("delivery"),
-        items: z.array(orderItemInput).min(1),
-        phone: z.string().min(5).max(20),
-        address: z.string().min(3).max(255),
-        city: z.string().min(1).max(100),
-        notes: z.string().max(1000).optional(),
-    }),
-    z.object({
-        orderSource: z.literal("dine_in"),
-        items: z.array(orderItemInput).min(1),
-        tableId: z.number(),
-        notes: z.string().max(1000).optional(),
-    }),
-]);
+// All orders are dine-in — every order must reference a table.
+const createOrderInput = z.object({
+    items: z.array(orderItemInput).min(1),
+    tableId: z.number(),
+    notes: z.string().max(1000).optional(),
+});
 
 async function validateItemsAndDecrementStock(input: { dishId: number; quantity: number }[]) {
     const db = getDb();
@@ -92,53 +80,6 @@ export const orderRouter = createRouter({
         const db = getDb();
         const { totalCents, lineItems } = await validateItemsAndDecrementStock(input.items);
 
-        if (input.orderSource === "delivery") {
-            const orderResult = await db.insert(orders).values({
-                userId: ctx.user.id,
-                status: "pending",
-                orderSource: "delivery",
-                totalAmount: (totalCents / 100).toFixed(2),
-                phone: input.phone,
-                address: input.address,
-                city: input.city,
-                notes: input.notes,
-            });
-            const orderId = Number(orderResult[0].insertId);
-            await db.insert(orderItems).values(lineItems.map((item) => ({ ...item, orderId })));
-
-            const [firstName, ...rest] = (ctx.user.name || "Guest").trim().split(" ");
-
-            let iframeUrl: string;
-            try {
-                const result = await initiatePaymobPayment({
-                    amountCents: totalCents,
-                    merchantOrderId: String(orderId),
-                    billingData: {
-                        first_name: firstName || "Guest",
-                        last_name: rest.join(" ") || "Customer",
-                        email: ctx.user.email,
-                        phone_number: input.phone,
-                    },
-                });
-                iframeUrl = result.iframeUrl;
-
-                await db
-                    .update(orders)
-                    .set({ paymobOrderId: String(result.paymobOrderId) })
-                    .where(eq(orders.id, orderId));
-            } catch (err) {
-                console.error("Paymob payment initiation failed for order", orderId, err);
-                await db.update(orders).set({ status: "failed" }).where(eq(orders.id, orderId));
-                throw new TRPCError({
-                    code: "INTERNAL_SERVER_ERROR",
-                    message: "Could not initiate payment. Please try again.",
-                });
-            }
-
-            return { orderSource: "delivery" as const, orderId, iframeUrl };
-        }
-
-        // --- Dine-in flow ---
         const [table] = await db.select().from(tables).where(eq(tables.id, input.tableId));
         if (!table) {
             throw new TRPCError({ code: "NOT_FOUND", message: "Table not found" });
@@ -173,7 +114,6 @@ export const orderRouter = createRouter({
         const orderResult = await db.insert(orders).values({
             userId: ctx.user.id,
             status: "pending_edit",
-            orderSource: "dine_in",
             totalAmount: (totalCents / 100).toFixed(2),
             notes: input.notes,
             tableId: table.id,
@@ -185,7 +125,6 @@ export const orderRouter = createRouter({
         await db.insert(orderItems).values(lineItems.map((item) => ({ ...item, orderId })));
 
         return {
-            orderSource: "dine_in" as const,
             orderId,
             batchId,
             tableNumber: table.tableNumber,

@@ -9,8 +9,6 @@ import Menu from "./pages/Menu";
 import Story from "./pages/Story";
 import Reserve from "./pages/Reserve";
 import Contact from "./pages/Contact";
-import Checkout from "./pages/Checkout";
-import OrderComplete from "./pages/OrderComplete";
 import Profile from "./pages/Profile";
 import MyOrders from "./pages/MyOrders";
 import MyReservations from "./pages/MyReservations";
@@ -49,8 +47,6 @@ export default function App() {
         <Route path="/story" element={<Story />} />
         <Route path="/reserve" element={<Reserve />} />
         <Route path="/contact" element={<Contact />} />
-        <Route path="/checkout" element={<Checkout />} />
-        <Route path="/order/complete" element={<OrderComplete />} />
         <Route path="/table/:code" element={<TableScan />} />
         <Route path="/table-checkout" element={<TableCheckout />} />
         <Route path="/order/pending/:orderId" element={<OrderPending />} />

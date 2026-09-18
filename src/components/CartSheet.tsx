@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
+import { Minus, Plus, ShoppingBag, Trash2, QrCode } from "lucide-react";
 import {
     Sheet,
     SheetContent,
@@ -80,11 +80,20 @@ export function CartSheet({ open, onOpenChange }: CartSheetProps) {
                             <span>Total</span>
                             <span>{totalPrice.toFixed(2)} EGP</span>
                         </div>
-                        <Button asChild className="w-full" size="lg" onClick={() => onOpenChange(false)}>
-                            <Link to={session ? "/table-checkout" : "/checkout"}>
-                                {session ? `Send to Table ${session.tableNumber}` : "Proceed to Checkout"}
-                            </Link>
-                        </Button>
+                        {session ? (
+                            <Button asChild className="w-full" size="lg" onClick={() => onOpenChange(false)}>
+                                <Link to="/table-checkout">
+                                    Send Order to Kitchen — Table {session.tableNumber}
+                                </Link>
+                            </Button>
+                        ) : (
+                            <div className="text-center space-y-2">
+                                <div className="flex items-center justify-center gap-2 text-muted-foreground text-sm">
+                                    <QrCode className="w-4 h-4" />
+                                    <span>Scan the QR code on your table to place an order</span>
+                                </div>
+                            </div>
+                        )}
                     </SheetFooter>
                 )}
             </SheetContent>
