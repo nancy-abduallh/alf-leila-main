@@ -73,7 +73,10 @@ export default function OrderPending() {
 
     const [draftItems, setDraftItems] = useState<DraftItem[]>([]);
 
-    useEffect(() => {
+
+    const [syncedData, setSyncedData] = useState<typeof data>(undefined);
+    if (data !== syncedData) {
+        setSyncedData(data);
         if (data) {
             setDraftItems(
                 data.items.map((i) => ({
@@ -84,7 +87,7 @@ export default function OrderPending() {
                 })),
             );
         }
-    }, [data]);
+    }
 
     const updateItems = trpc.order.updateItems.useMutation({
         onSuccess: () => {
@@ -100,8 +103,6 @@ export default function OrderPending() {
         [draftItems],
     );
 
-    // Other diners' orders on the same ticket — read-only, so people can see
-    // the table is cooked as one order without editing each other.
     const tableMates = useMemo(
         () => (batch?.orders ?? []).filter((o) => o.id !== id),
         [batch, id],
@@ -273,6 +274,6 @@ export default function OrderPending() {
                     </div>
                 )}
             </div>
-        </main>
+        </main >
     );
 }
