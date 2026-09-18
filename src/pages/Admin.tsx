@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../hooks/useAuth";
-import { trpc } from "../providers/trpc";
 import KitchenBoard from "../components/admin/KitchenBoard";
 import {
   CheckCircle,
@@ -55,6 +54,12 @@ import {
 } from "recharts";
 import { ADMIN_LOGIN_PATH } from "../const";
 import { Input } from "../components/ui/input";
+import { trpc, type RouterOutputs } from "@providers/trpc";
+
+type AdminOrder = RouterOutputs["order"]["list"][number];
+type AdminOrderItem = AdminOrder["items"][number];
+type AdminTable = RouterOutputs["table"]["list"][number];
+type AdminTableQr = AdminTable["qrCodes"][number];
 
 const reservationStatusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-400",
@@ -63,11 +68,11 @@ const reservationStatusColors: Record<string, string> = {
 };
 
 const orderStatusColors: Record<string, string> = {
+  pending_edit: "bg-cream/10 text-cream/70",
   pending: "bg-yellow-500/10 text-yellow-400",
-  paid: "bg-blue-500/10 text-blue-400",
   preparing: "bg-orange-500/10 text-orange-400",
-  delivered: "bg-green-500/10 text-green-400",
-  failed: "bg-red-500/10 text-red-400",
+  ready: "bg-blue-500/10 text-blue-400",
+  served: "bg-green-500/10 text-green-400",
   cancelled: "bg-red-500/10 text-red-400",
 };
 
@@ -678,7 +683,7 @@ export default function Admin() {
                           Items
                         </th>
                         <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">
-                          Address
+                          Table
                         </th>
                         <th className="text-left px-4 py-3 text-cream/50 text-xs font-medium uppercase tracking-wider">
                           Total
@@ -715,22 +720,18 @@ export default function Admin() {
                             <p className="text-cream/40 text-xs">
                               {order.customerEmail}
                             </p>
-
-                            <p className="text-cream/40 text-xs">
-                              {order.phone}
-                            </p>
                           </td>
 
                           <td className="px-4 py-3 text-cream/70 text-xs space-y-0.5">
-                            {order.items.map((item) => (
+                            {order.items.map((item: AdminOrderItem) => (
                               <p key={item.id}>
                                 {item.quantity}x {item.dishName}
                               </p>
                             ))}
                           </td>
 
-                          <td className="px-4 py-3 text-cream/60 text-xs max-w-[160px]">
-                            {order.address}, {order.city}
+                          <td className="px-4 py-3 text-cream/60 text-xs">
+                            Table {order.tableNumber}
                           </td>
 
                           <td className="px-4 py-3 text-gold-primary text-sm">
@@ -755,24 +756,24 @@ export default function Admin() {
                               </SelectTrigger>
 
                               <SelectContent>
-                                <SelectItem value="pending">
-                                  Pending
+                                <SelectItem value="pending_edit">
+                                  Editing
                                 </SelectItem>
 
-                                <SelectItem value="paid">
-                                  Paid
+                                <SelectItem value="pending">
+                                  Pending
                                 </SelectItem>
 
                                 <SelectItem value="preparing">
                                   Preparing
                                 </SelectItem>
 
-                                <SelectItem value="delivered">
-                                  Delivered
+                                <SelectItem value="ready">
+                                  Ready
                                 </SelectItem>
 
-                                <SelectItem value="failed">
-                                  Failed
+                                <SelectItem value="served">
+                                  Served
                                 </SelectItem>
 
                                 <SelectItem value="cancelled">
@@ -1026,7 +1027,7 @@ export default function Admin() {
                         </p>
                       )}
 
-                      {table.qrCodes.map((qr) => {
+                      {table.qrCodes.map((qr: AdminTableQr) => {
                         const url = `${window.location.origin}/table/${qr.code}`;
 
                         return (

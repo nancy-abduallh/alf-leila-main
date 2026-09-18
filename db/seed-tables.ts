@@ -4,25 +4,34 @@
 // codes resolves to the same table — that's what lets four people scan four
 // different stickers and still land on one kitchen ticket.
 //
+// `area` is what the reservation allocator matches against when a guest asks
+// for the terrace, a window, or a spot near the stage.
+//
 // Run with:  npx tsx db/seed-tables.ts
 import "dotenv/config";
 import { nanoid } from "nanoid";
 import { eq } from "drizzle-orm";
 import { getDb } from "../server/queries/connection";
 import { tables, tableQrCodes } from "./schema";
+import type { ReservationAreaId } from "../contracts/constants";
 
-const DINING_ROOM: { tableNumber: string; seats: number; qrCount: number }[] = [
-    { tableNumber: "1", seats: 2, qrCount: 2 },
-    { tableNumber: "2", seats: 2, qrCount: 2 },
-    { tableNumber: "3", seats: 4, qrCount: 4 },
-    { tableNumber: "4", seats: 4, qrCount: 4 },
-    { tableNumber: "5", seats: 4, qrCount: 4 },
-    { tableNumber: "6", seats: 6, qrCount: 6 },
-    { tableNumber: "7", seats: 6, qrCount: 6 },
-    { tableNumber: "8", seats: 8, qrCount: 4 },
-    { tableNumber: "T1", seats: 4, qrCount: 4 }, // terrace
-    { tableNumber: "T2", seats: 4, qrCount: 4 },
-];
+const DINING_ROOM: {
+    tableNumber: string;
+    seats: number;
+    qrCount: number;
+    area: ReservationAreaId;
+}[] = [
+        { tableNumber: "1", seats: 2, qrCount: 2, area: "window" },
+        { tableNumber: "2", seats: 2, qrCount: 2, area: "window" },
+        { tableNumber: "3", seats: 4, qrCount: 4, area: "main" },
+        { tableNumber: "4", seats: 4, qrCount: 4, area: "main" },
+        { tableNumber: "5", seats: 4, qrCount: 4, area: "stage" },
+        { tableNumber: "6", seats: 6, qrCount: 6, area: "main" },
+        { tableNumber: "7", seats: 6, qrCount: 6, area: "stage" },
+        { tableNumber: "8", seats: 8, qrCount: 4, area: "main" },
+        { tableNumber: "T1", seats: 4, qrCount: 4, area: "terrace" },
+        { tableNumber: "T2", seats: 4, qrCount: 4, area: "terrace" },
+    ];
 
 const BASE_URL = process.env.PUBLIC_APP_URL ?? "http://localhost:5173";
 
@@ -40,14 +49,24 @@ async function seedTables() {
 
         if (existing[0]) {
             tableId = existing[0].id;
-            console.log(`Table ${spec.tableNumber} already exists — reusing it.`);
+            // Backfill area/seats on tables seeded before areas existed.
+            if (existing[0].area !== spec.area || existing[0].seats !== spec.seats) {
+                await db
+                    .update(tables)
+                    .set({ area: spec.area, seats: spec.seats })
+                    .where(eq(tables.id, tableId));
+                console.log(`Table ${spec.tableNumber} updated → ${spec.area}, ${spec.seats} seats.`);
+            } else {
+                console.log(`Table ${spec.tableNumber} already exists — reusing it.`);
+            }
         } else {
             const result = await db.insert(tables).values({
                 tableNumber: spec.tableNumber,
                 seats: spec.seats,
+                area: spec.area,
             });
             tableId = Number(result[0].insertId);
-            console.log(`Created table ${spec.tableNumber} (${spec.seats} seats).`);
+            console.log(`Created table ${spec.tableNumber} (${spec.seats} seats, ${spec.area}).`);
         }
 
         const existingQr = await db

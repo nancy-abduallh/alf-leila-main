@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { trpc } from "../providers/trpc";
 import { useTableSession } from "../providers/tableSession";
 import { Minus, Plus, Trash2, CheckCircle2, Clock, Users, ChefHat, BellRing } from "lucide-react";
 import { toast } from "sonner";
+import { trpc } from "../providers/trpc";
+import type { RouterOutputs } from "../providers/trpc";
+
+type BatchOrder = RouterOutputs["order"]["getBatch"]["orders"][number];
+type BatchOrderItem = BatchOrder["items"][number];
 
 function useCountdown(target: Date | null) {
     const [msLeft, setMsLeft] = useState(() => (target ? target.getTime() - Date.now() : 0));
@@ -258,7 +262,7 @@ export default function OrderPending() {
                                     className="bg-table-mid/50 border border-gold-primary/10 rounded-lg p-4"
                                 >
                                     <p className="text-cream/50 text-xs mb-2">Order #{mate.id}</p>
-                                    {mate.items.map((item) => (
+                                    {mate.items.map((item: BatchOrderItem) => (
                                         <p key={item.id} className="text-cream/70 text-sm">
                                             {item.quantity}&times; {item.dishName}
                                         </p>

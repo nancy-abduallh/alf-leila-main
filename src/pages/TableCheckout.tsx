@@ -14,12 +14,12 @@ export default function TableCheckout() {
     const navigate = useNavigate();
     const [notes, setNotes] = useState("");
 
+    // Every order is dine-in now, so there's no source to branch on —
+    // the guest always lands on the 5-minute edit screen.
     const createOrder = trpc.order.create.useMutation({
         onSuccess: (data) => {
             clear();
-            if (data.orderSource === "dine_in") {
-                navigate(`/order/pending/${data.orderId}`);
-            }
+            navigate(`/order/pending/${data.orderId}`);
         },
         onError: (err) => toast.error(err.message),
     });
@@ -96,7 +96,6 @@ export default function TableCheckout() {
 
     const handleSubmit = () => {
         createOrder.mutate({
-            orderSource: "dine_in",
             tableId: session.tableId,
             items: items.map((i) => ({ dishId: i.dishId, quantity: i.quantity })),
             notes: notes || undefined,

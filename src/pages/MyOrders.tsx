@@ -1,7 +1,12 @@
 import { Link } from "react-router";
-import { trpc } from "../providers/trpc";
 import { useLanguage } from "../providers/language";
 import { Package, Pencil } from "lucide-react";
+
+import { trpc } from "../providers/trpc";
+import type { RouterOutputs } from "../providers/trpc";
+
+type MyOrder = RouterOutputs["order"]["myOrders"][number];
+type MyOrderItem = MyOrder["items"][number];
 
 const statusColors: Record<string, string> = {
     pending_edit: "bg-yellow-500/10 text-yellow-400",
@@ -52,7 +57,7 @@ export default function MyOrders() {
                                 </div>
 
                                 <div className="space-y-1 mb-3">
-                                    {order.items.map((item) => (
+                                    {order.items.map((item: MyOrderItem) => (
                                         <p key={item.id} className="text-cream/60 text-sm">
                                             {item.quantity}x {item.dishName}
                                         </p>

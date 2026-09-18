@@ -2,8 +2,13 @@ import { useEffect, useState } from "react";
 import { trpc } from "../../providers/trpc";
 import { toast } from "sonner";
 import { Clock, ChefHat, BellRing, Send, Utensils } from "lucide-react";
+import type { RouterOutputs } from "../../providers/trpc";
 
-// Re-renders once a second so the countdowns actually move.
+type KitchenBatch = RouterOutputs["order"]["kitchenQueue"][number];
+type KitchenOrder = KitchenBatch["orders"][number];
+type KitchenOrderItem = KitchenOrder["items"][number];
+type KitchenLineItem = KitchenBatch["combinedItems"][number];
+
 function useTick(intervalMs = 1000) {
     const [, setNow] = useState(Date.now());
     useEffect(() => {
@@ -87,7 +92,7 @@ export default function KitchenBoard() {
                 const stage: Stage =
                     batch.status === "open"
                         ? "waiting"
-                        : batch.orders.every((o) => o.status === "ready" || o.status === "served")
+                        : batch.orders.every((o: KitchenOrder) => o.status === "ready" || o.status === "served")
                             ? "ready"
                             : "preparing";
                 const styles = stageStyles[stage];
@@ -121,7 +126,7 @@ export default function KitchenBoard() {
                             <p className="text-cream/40 text-[11px] tracking-[0.1em] uppercase mb-2">
                                 Combined for the table
                             </p>
-                            {batch.combinedItems.map((item) => (
+                            {batch.combinedItems.map((item: KitchenLineItem) => (
                                 <div
                                     key={item.dishName}
                                     className="flex justify-between text-cream text-sm py-0.5"
@@ -139,13 +144,13 @@ export default function KitchenBoard() {
                                 Per-diner breakdown
                             </summary>
                             <div className="mt-3 space-y-3">
-                                {batch.orders.map((order) => (
+                                {batch.orders.map((order: KitchenOrder) => (
                                     <div key={order.id} className="border-l-2 border-gold-primary/20 pl-3">
                                         <p className="text-cream/60 text-xs mb-1">
                                             Order #{order.id} &middot;{" "}
                                             <span className="capitalize">{order.status.replace("_", " ")}</span>
                                         </p>
-                                        {order.items.map((item) => (
+                                        {order.items.map((item: KitchenOrderItem) => (
                                             <p key={item.id} className="text-cream/70 text-sm">
                                                 {item.quantity}&times; {item.dishName}
                                             </p>

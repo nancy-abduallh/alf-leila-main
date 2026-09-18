@@ -2,10 +2,14 @@ import { createTRPCReact } from "@trpc/react-query";
 import { httpBatchLink } from "@trpc/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import superjson from "superjson";
+import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "../../server/router";
 import type { ReactNode } from "react";
 
 export const trpc = createTRPCReact<AppRouter>();
+
+
+export type RouterOutputs = inferRouterOutputs<AppRouter>;
 
 const queryClient = new QueryClient();
 const trpcClient = trpc.createClient({

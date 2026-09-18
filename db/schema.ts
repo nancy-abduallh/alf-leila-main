@@ -55,9 +55,16 @@ export const reservations = mysqlTable("reservations", {
   time: time("time").notNull(),
   guests: int("guests").notNull(),
   notes: text("notes"),
-  // Customer-facing request (e.g. "Window seat", "Outdoor") — not a guaranteed assignment.
+  // Area the guest asked for, as a RESERVATION_AREA_IDS id ("terrace", ...).
+  // A hint for the allocator, not a guarantee — if nothing is free there the
+  // guest still gets a table, just elsewhere.
   preferredArea: varchar("preferredArea", { length: 100 }),
-  // Actual table assigned by staff once the reservation is confirmed.
+  // The physical table held for this booking. Assigned automatically the
+  // moment the reservation is created, and overridable by staff afterwards.
+  // Nullable so cancelled (and legacy) rows can hold nothing.
+  tableId: int("tableId"),
+  // Denormalised copy of tables.tableNumber so listing a reservation never
+  // needs a join, and so the number the guest was told survives a table rename.
   tableNumber: varchar("tableNumber", { length: 20 }),
   status: mysqlEnum("status", ["pending", "confirmed", "cancelled"]).default("pending").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -68,6 +75,10 @@ export const tables = mysqlTable("tables", {
   id: int("id").primaryKey().autoincrement(),
   tableNumber: varchar("tableNumber", { length: 20 }).notNull().unique(),
   seats: int("seats"),
+  // Which part of the dining room this table sits in — one of
+  // RESERVATION_AREA_IDS. Drives the "preferred area" match when a
+  // reservation is allocated. Null = unclassified, still allocatable.
+  area: varchar("area", { length: 50 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

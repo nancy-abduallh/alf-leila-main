@@ -3,12 +3,24 @@ import { useNavigate } from "react-router";
 import { trpc } from "../providers/trpc";
 import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../providers/language";
-import { Calendar, Clock, Users, Phone, MessageSquare, CheckCircle } from "lucide-react";
+import { RESERVATION_AREAS, areaLabel } from "../../contracts/constants";
+import {
+  Calendar,
+  Clock,
+  Users,
+  Phone,
+  MessageSquare,
+  MapPin,
+  CheckCircle,
+  AlertCircle,
+} from "lucide-react";
+
+type Assigned = { tableNumber: string; area: string | null; areaMatched: boolean };
 
 export default function Reserve() {
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const [formData, setFormData] = useState({
     phone: "",
@@ -18,16 +30,39 @@ export default function Reserve() {
     notes: "",
     preferredArea: "",
   });
-  const [submitted, setSubmitted] = useState(false);
+  const [assigned, setAssigned] = useState<Assigned | null>(null);
+
+  const guestCount = Number(formData.guests) || 1;
+
+  // Live look at what's left for this slot, so the guest isn't surprised
+  // only after hitting submit.
+  const availability = trpc.reservation.availability.useQuery(
+    { date: formData.date, time: formData.time, guests: guestCount },
+    { enabled: Boolean(formData.date && formData.time) },
+  );
 
   const createReservation = trpc.reservation.create.useMutation({
-    onSuccess: () => setSubmitted(true),
+    onSuccess: (data) =>
+      setAssigned({
+        tableNumber: data.tableNumber,
+        area: data.area,
+        areaMatched: data.areaMatched,
+      }),
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.date || !formData.time) return;
-    createReservation.mutate(formData);
+    createReservation.mutate({
+      phone: formData.phone || undefined,
+      date: formData.date,
+      time: formData.time,
+      guests: guestCount, // select values arrive as strings — coerce
+      notes: formData.notes || undefined,
+      preferredArea:
+        (formData.preferredArea as (typeof RESERVATION_AREAS)[number]["id"]) ||
+        undefined,
+    });
   };
 
   const handleChange = (
@@ -71,6 +106,8 @@ export default function Reserve() {
     );
   }
 
+  const slotFull = availability.data?.total === 0;
+
   return (
     <main className="bg-table-dark min-h-screen pt-[72px]">
       <div className="relative h-[35vh] min-h-[250px] overflow-hidden">
@@ -94,13 +131,33 @@ export default function Reserve() {
       </div>
 
       <div className="max-w-[800px] mx-auto px-6 lg:px-12 py-16 lg:py-24">
-        {submitted ? (
+        {assigned ? (
           <div className="text-center py-16">
             <CheckCircle className="w-16 h-16 text-gold-primary mx-auto mb-6" />
             <h2 className="font-display text-cream text-2xl mb-3">{t("reservePage.confirmedTitle")}</h2>
-            <p className="text-cream/60 text-base mb-2">
+            <p className="text-cream/60 text-base mb-6">
               {t("reservePage.confirmedMessage").replace("{name}", user.name || "")}
             </p>
+
+            <div className="inline-block border border-gold-primary/30 rounded-xl px-8 py-5 mb-6">
+              <p className="text-cream/50 text-xs tracking-[0.15em] uppercase mb-1">
+                {t("reservePage.tableAssignedLabel")}
+              </p>
+              <p className="font-display text-gold-primary text-4xl leading-none">
+                {assigned.tableNumber}
+              </p>
+              {assigned.area && (
+                <p className="text-cream/50 text-sm mt-2">
+                  {areaLabel(assigned.area, language)}
+                </p>
+              )}
+            </div>
+
+            {!assigned.areaMatched && (
+              <p className="text-cream/40 text-sm mb-2">
+                {t("reservePage.areaUnavailable")}
+              </p>
+            )}
             <p className="text-cream/40 text-sm">
               {t("reservePage.confirmedEmail").replace("{email}", user.email)}
             </p>
@@ -185,6 +242,21 @@ export default function Reserve() {
               </div>
             </div>
 
+            {formData.date && formData.time && (
+              <p
+                className={`text-sm ${slotFull ? "text-red-400" : "text-cream/50"}`}
+              >
+                {availability.isLoading
+                  ? t("reservePage.availabilityChecking")
+                  : slotFull
+                    ? t("reservePage.availabilityNone")
+                    : t("reservePage.availabilityFree").replace(
+                      "{count}",
+                      String(availability.data?.total ?? ""),
+                    )}
+              </p>
+            )}
+
             <div>
               <label className="flex items-center gap-2 text-cream/70 text-sm mb-2">
                 <MessageSquare className="w-4 h-4 text-gold-primary" />
@@ -202,22 +274,41 @@ export default function Reserve() {
 
             <div>
               <label className="flex items-center gap-2 text-cream/70 text-sm mb-2">
-                <MessageSquare className="w-4 h-4 text-gold-primary" />
-                Preferred Area (optional)
+                <MapPin className="w-4 h-4 text-gold-primary" />
+                {t("reservePage.areaLabel")}
               </label>
-              <input
-                type="text"
+              <select
                 name="preferredArea"
                 value={formData.preferredArea}
                 onChange={handleChange}
-                className="w-full px-4 py-3 bg-table-mid border border-gold-primary/20 rounded-lg text-cream text-sm placeholder:text-cream/30 focus:outline-none focus:border-gold-primary transition-colors"
-                placeholder="e.g. Window seat, outdoor terrace, near the stage..."
-              />
+                className="w-full px-4 py-3 bg-table-mid border border-gold-primary/20 rounded-lg text-cream text-sm focus:outline-none focus:border-gold-primary transition-colors"
+              >
+                <option value="" className="bg-table-mid">
+                  {t("reservePage.areaAny")}
+                </option>
+                {RESERVATION_AREAS.map((area) => (
+                  <option key={area.id} value={area.id} className="bg-table-mid">
+                    {area[language]}
+                  </option>
+                ))}
+              </select>
+              <p className="text-cream/40 text-xs mt-2">
+                {t("reservePage.areaHint")}
+              </p>
             </div>
+
+            {createReservation.error && (
+              <div className="flex items-start gap-2 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
+                <p className="text-red-400 text-sm">
+                  {createReservation.error.message}
+                </p>
+              </div>
+            )}
 
             <button
               type="submit"
-              disabled={createReservation.isPending}
+              disabled={createReservation.isPending || slotFull}
               className="w-full py-4 bg-gold-primary text-table-dark font-medium text-sm tracking-[0.05em] rounded-full hover:bg-cream hover:shadow-gold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {createReservation.isPending ? t("reservePage.submitting") : t("reservePage.confirm")}

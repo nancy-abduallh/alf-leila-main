@@ -1,35 +1,163 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
+import { and, desc, eq, ne } from "drizzle-orm";
 import { createRouter, authedQuery, adminQuery } from "./middleware";
 import { getDb } from "./queries/connection";
-import { reservations } from "@db/schema";
-import { eq, desc } from "drizzle-orm";
+import { reservations, tables } from "@db/schema";
+import { RESERVATION_AREA_IDS } from "@contracts/constants";
+import {
+  freeTables,
+  normalizeTime,
+  pickTable,
+  slotsConflict,
+  type AssignableTable,
+  type BookedSlot,
+} from "./lib/table-assignment";
+
+const bookingInput = z.object({
+  phone: z.string().optional(),
+  date: z.string(),
+  time: z.string(),
+  guests: z.number().min(1).max(20),
+  notes: z.string().optional(),
+  preferredArea: z.enum(RESERVATION_AREA_IDS).optional(),
+});
+
+/** Rows that already hold a table on `day`, cancelled ones excluded. */
+const liveOnDay = (day: Date) =>
+  and(eq(reservations.date, day), ne(reservations.status, "cancelled"));
 
 export const reservationRouter = createRouter({
-  create: authedQuery
-    .input(
-      z.object({
-        phone: z.string().optional(),
-        date: z.string(),
-        time: z.string(),
-        guests: z.number().min(1).max(20),
-        notes: z.string().optional(),
-        preferredArea: z.string().max(100).optional(),
-      }),
-    )
-    .mutation(async ({ input, ctx }) => {
-      const db = getDb();
-      const result = await db.insert(reservations).values({
+  /**
+   * Creates the booking AND allocates the table in one shot — the guest walks
+   * away knowing their table number instead of waiting on staff.
+   *
+   * Wrapped in a transaction with SELECT ... FOR UPDATE so two people booking
+   * the last table at the same second can't both win it.
+   */
+  create: authedQuery.input(bookingInput).mutation(async ({ input, ctx }) => {
+    const db = getDb();
+    const day = new Date(input.date);
+    const time = normalizeTime(input.time);
+
+    return db.transaction(async (tx) => {
+      const diningRoom: AssignableTable[] = await tx
+        .select({
+          id: tables.id,
+          tableNumber: tables.tableNumber,
+          seats: tables.seats,
+          area: tables.area,
+        })
+        .from(tables);
+
+      if (diningRoom.length === 0) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message:
+            "No tables are configured yet. Run `npm run db:seed:tables` first.",
+        });
+      }
+
+      const booked: BookedSlot[] = await tx
+        .select({
+          tableId: reservations.tableId,
+          tableNumber: reservations.tableNumber,
+          time: reservations.time,
+        })
+        .from(reservations)
+        .where(liveOnDay(day))
+        .for("update");
+
+      const table = pickTable({
+        diningRoom,
+        booked,
+        time,
+        guests: input.guests,
+        preferredArea: input.preferredArea ?? null,
+      });
+
+      if (!table) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message:
+            "We have no table for that party size at that time. Please try another time or date.",
+        });
+      }
+
+      const result = await tx.insert(reservations).values({
         userId: ctx.user.id,
         name: ctx.user.name || "Guest",
         email: ctx.user.email,
         phone: input.phone,
-        date: new Date(input.date),
-        time: input.time,
+        date: day,
+        time,
         guests: input.guests,
         notes: input.notes,
         preferredArea: input.preferredArea,
+        tableId: table.id,
+        tableNumber: table.tableNumber,
+        // Staff still gives the final nod in the admin panel; the table is
+        // held either way. Swap to status: "confirmed" to skip that step.
       });
-      return { success: true, id: Number(result[0].insertId) };
+
+      return {
+        success: true,
+        id: Number(result[0].insertId),
+        tableId: table.id,
+        tableNumber: table.tableNumber,
+        area: table.area,
+        // true when the guest asked for an area and didn't get it
+        areaMatched: !input.preferredArea || table.area === input.preferredArea,
+      };
+    });
+  }),
+
+  /**
+   * How many tables are still free for a date/time/party — lets the form warn
+   * before the guest fills everything in and hits a wall.
+   */
+  availability: authedQuery
+    .input(
+      z.object({
+        date: z.string(),
+        time: z.string(),
+        guests: z.number().min(1).max(20),
+      }),
+    )
+    .query(async ({ input }) => {
+      const db = getDb();
+      const day = new Date(input.date);
+      const time = normalizeTime(input.time);
+
+      const diningRoom: AssignableTable[] = await db
+        .select({
+          id: tables.id,
+          tableNumber: tables.tableNumber,
+          seats: tables.seats,
+          area: tables.area,
+        })
+        .from(tables);
+
+      const booked: BookedSlot[] = await db
+        .select({
+          tableId: reservations.tableId,
+          tableNumber: reservations.tableNumber,
+          time: reservations.time,
+        })
+        .from(reservations)
+        .where(liveOnDay(day));
+
+      const fitting = freeTables(diningRoom, booked, time).filter(
+        (t) => (t.seats ?? 0) >= input.guests,
+      );
+
+      const byArea: Record<string, number> = {};
+      for (const t of fitting) {
+        const key = t.area ?? "unassigned";
+        byArea[key] = (byArea[key] ?? 0) + 1;
+      }
+
+      return { total: fitting.length, byArea };
     }),
 
   myReservations: authedQuery.query(async ({ ctx }) => {
@@ -40,6 +168,29 @@ export const reservationRouter = createRouter({
       .where(eq(reservations.userId, ctx.user.id))
       .orderBy(desc(reservations.createdAt));
   }),
+
+  /** A guest cancelling releases the table back into the pool immediately. */
+  cancel: authedQuery
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = getDb();
+      const [existing] = await db
+        .select()
+        .from(reservations)
+        .where(eq(reservations.id, input.id));
+
+      if (!existing || existing.userId !== ctx.user.id) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Reservation not found" });
+      }
+      if (existing.status === "cancelled") return { success: true };
+
+      await db
+        .update(reservations)
+        .set({ status: "cancelled", tableId: null, tableNumber: null })
+        .where(eq(reservations.id, input.id));
+
+      return { success: true };
+    }),
 
   list: adminQuery.query(async () => {
     const db = getDb();
@@ -55,14 +206,21 @@ export const reservationRouter = createRouter({
     )
     .mutation(async ({ input }) => {
       const db = getDb();
-      await db
-        .update(reservations)
-        .set({ status: input.status })
-        .where(eq(reservations.id, input.id));
+      // Cancelling frees the table for someone else in that slot.
+      const patch =
+        input.status === "cancelled"
+          ? { status: input.status, tableId: null, tableNumber: null }
+          : { status: input.status };
+
+      await db.update(reservations).set(patch).where(eq(reservations.id, input.id));
       return { success: true };
     }),
 
-  // Staff assigns (or clears, by passing null) the physical table number.
+  /**
+   * Staff override of the automatic pick — moving a party to a different
+   * table, or clearing the assignment with null. Refuses a table that's
+   * already taken in that slot so the floor plan stays honest.
+   */
   assignTable: adminQuery
     .input(
       z.object({
@@ -72,10 +230,59 @@ export const reservationRouter = createRouter({
     )
     .mutation(async ({ input }) => {
       const db = getDb();
+
+      if (input.tableNumber === null) {
+        await db
+          .update(reservations)
+          .set({ tableId: null, tableNumber: null })
+          .where(eq(reservations.id, input.id));
+        return { success: true };
+      }
+
+      const [target] = await db
+        .select()
+        .from(reservations)
+        .where(eq(reservations.id, input.id));
+      if (!target) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Reservation not found" });
+      }
+
+      const [table] = await db
+        .select()
+        .from(tables)
+        .where(eq(tables.tableNumber, input.tableNumber));
+      if (!table) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "No such table" });
+      }
+
+      const sameDay = await db
+        .select({
+          id: reservations.id,
+          tableId: reservations.tableId,
+          tableNumber: reservations.tableNumber,
+          time: reservations.time,
+        })
+        .from(reservations)
+        .where(liveOnDay(new Date(target.date)));
+
+      const clash = sameDay.some(
+        (r) =>
+          r.id !== target.id &&
+          (r.tableId === table.id || r.tableNumber === table.tableNumber) &&
+          slotsConflict(r.time, target.time),
+      );
+      if (clash) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: `Table ${table.tableNumber} is already booked around that time.`,
+        });
+      }
+
       await db
         .update(reservations)
-        .set({ tableNumber: input.tableNumber })
+        .set({ tableId: table.id, tableNumber: table.tableNumber })
         .where(eq(reservations.id, input.id));
+
       return { success: true };
     }),
 });

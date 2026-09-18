@@ -278,6 +278,28 @@ export const orderRouter = createRouter({
         }));
     }),
 
+    updateStatus: adminQuery
+        .input(
+            z.object({
+                id: z.number(),
+                status: orderStatusEnum,
+            }),
+        )
+        .mutation(async ({ input }) => {
+            const db = getDb();
+            const [order] = await db.select().from(orders).where(eq(orders.id, input.id));
+            if (!order) {
+                throw new TRPCError({ code: "NOT_FOUND", message: "Order not found" });
+            }
+
+            await db
+                .update(orders)
+                .set({ status: input.status })
+                .where(eq(orders.id, input.id));
+
+            return { success: true };
+        }),
+
     // Kitchen display. Shows tables whose window is still counting down *and*
     // tables already sent, so the line can see what's coming.
     kitchenQueue: adminQuery.query(async () => {
