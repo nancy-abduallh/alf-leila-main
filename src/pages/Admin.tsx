@@ -54,7 +54,7 @@ import {
 } from "recharts";
 import { ADMIN_LOGIN_PATH } from "../const";
 import { Input } from "../components/ui/input";
-import { trpc, type RouterOutputs } from "@providers/trpc";
+import { trpc, type RouterOutputs } from "../providers/trpc";
 
 type AdminOrder = RouterOutputs["order"]["list"][number];
 type AdminOrderItem = AdminOrder["items"][number];
