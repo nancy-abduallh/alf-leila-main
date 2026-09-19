@@ -84,21 +84,43 @@ export const reservationRouter = createRouter({
         });
       }
 
-      const result = await tx.insert(reservations).values({
-        userId: ctx.user.id,
-        name: ctx.user.name || "Guest",
-        email: ctx.user.email,
-        phone: input.phone,
-        date: day,
-        time,
-        guests: input.guests,
-        notes: input.notes,
-        preferredArea: input.preferredArea,
-        tableId: table.id,
-        tableNumber: table.tableNumber,
-        // Staff still gives the final nod in the admin panel; the table is
-        // held either way. Swap to status: "confirmed" to skip that step.
-      });
+      let result;
+      try {
+        result = await tx.insert(reservations).values({
+          userId: ctx.user.id,
+          name: ctx.user.name || "Guest",
+          email: ctx.user.email,
+          phone: input.phone,
+          date: day,
+          time,
+          guests: input.guests,
+          notes: input.notes,
+          preferredArea: input.preferredArea,
+          tableId: table.id,
+          tableNumber: table.tableNumber,
+          // Staff still gives the final nod in the admin panel; the table is
+          // held either way. Swap to status: "confirmed" to skip that step.
+        });
+      } catch (err) {
+        // Two guests racing for the last table for the same slot can both
+        // pass the in-memory availability check above before either commits.
+        // The DB's unique constraint (tableId, date, time) is the real
+        // tie-breaker — whoever loses gets a clean retry prompt instead of a
+        // 500 and a silently double-booked table.
+        if (
+          err &&
+          typeof err === "object" &&
+          "code" in err &&
+          (err as { code?: string }).code === "ER_DUP_ENTRY"
+        ) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message:
+              "That table was just booked by someone else for this time. Please try again.",
+          });
+        }
+        throw err;
+      }
 
       return {
         success: true,

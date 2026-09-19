@@ -41,18 +41,26 @@ export default function Reserve() {
     { enabled: Boolean(formData.date && formData.time) },
   );
 
+  const utils = trpc.useUtils();
   const createReservation = trpc.reservation.create.useMutation({
-    onSuccess: (data) =>
+    onSuccess: (data) => {
       setAssigned({
         tableNumber: data.tableNumber,
         area: data.area,
         areaMatched: data.areaMatched,
-      }),
+      });
+      // So the "X tables available" count is correct if the guest (or staff
+      // testing in the same tab) books again for the same slot afterwards.
+      utils.reservation.availability.invalidate();
+    },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.date || !formData.time) return;
+    // Guards against a double-click firing this twice before React re-renders
+    // the disabled button — without this, both requests can leave the client
+    // before the first response comes back.
+    if (!formData.date || !formData.time || createReservation.isPending) return;
     createReservation.mutate({
       phone: formData.phone || undefined,
       date: formData.date,

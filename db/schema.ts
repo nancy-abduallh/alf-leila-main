@@ -10,6 +10,7 @@ import {
   date,
   time,
   int,
+  unique,
 } from "drizzle-orm/mysql-core";
 
 export const users = mysqlTable("users", {
@@ -45,30 +46,47 @@ export const dishes = mysqlTable("dishes", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
-export const reservations = mysqlTable("reservations", {
-  id: int("id").primaryKey().autoincrement(),
-  userId: int("userId").notNull(),
-  name: varchar("name", { length: 100 }).notNull(),
-  email: varchar("email", { length: 100 }).notNull(),
-  phone: varchar("phone", { length: 20 }),
-  date: date("date").notNull(),
-  time: time("time").notNull(),
-  guests: int("guests").notNull(),
-  notes: text("notes"),
-  // Area the guest asked for, as a RESERVATION_AREA_IDS id ("terrace", ...).
-  // A hint for the allocator, not a guarantee — if nothing is free there the
-  // guest still gets a table, just elsewhere.
-  preferredArea: varchar("preferredArea", { length: 100 }),
-  // The physical table held for this booking. Assigned automatically the
-  // moment the reservation is created, and overridable by staff afterwards.
-  // Nullable so cancelled (and legacy) rows can hold nothing.
-  tableId: int("tableId"),
-  // Denormalised copy of tables.tableNumber so listing a reservation never
-  // needs a join, and so the number the guest was told survives a table rename.
-  tableNumber: varchar("tableNumber", { length: 20 }),
-  status: mysqlEnum("status", ["pending", "confirmed", "cancelled"]).default("pending").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+export const reservations = mysqlTable(
+  "reservations",
+  {
+    id: int("id").primaryKey().autoincrement(),
+    userId: int("userId").notNull(),
+    name: varchar("name", { length: 100 }).notNull(),
+    email: varchar("email", { length: 100 }).notNull(),
+    phone: varchar("phone", { length: 20 }),
+    date: date("date").notNull(),
+    time: time("time").notNull(),
+    guests: int("guests").notNull(),
+    notes: text("notes"),
+    // Area the guest asked for, as a RESERVATION_AREA_IDS id ("terrace", ...).
+    // A hint for the allocator, not a guarantee — if nothing is free there the
+    // guest still gets a table, just elsewhere.
+    preferredArea: varchar("preferredArea", { length: 100 }),
+    // The physical table held for this booking. Assigned automatically the
+    // moment the reservation is created, and overridable by staff afterwards.
+    // Nullable so cancelled (and legacy) rows can hold nothing.
+    tableId: int("tableId"),
+    // Denormalised copy of tables.tableNumber so listing a reservation never
+    // needs a join, and so the number the guest was told survives a table rename.
+    tableNumber: varchar("tableNumber", { length: 20 }),
+    status: mysqlEnum("status", ["pending", "confirmed", "cancelled"]).default("pending").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (table) => [
+    // Last-resort, DB-enforced guard against the exact same physical table
+    // being double-booked for the exact same date+time — belt-and-suspenders
+    // on top of the app-level availability check in reservation-router.ts,
+    // which is what actually enforces the wider "within one seating slot"
+    // overlap rule. A cancelled reservation clears tableId to null first, and
+    // MySQL treats every NULL in a unique index as distinct, so cancelling
+    // and rebooking the same slot is never blocked by this.
+    unique("reservations_table_date_time_unique").on(
+      table.tableId,
+      table.date,
+      table.time,
+    ),
+  ],
+);
 
 // A physical table in the restaurant.
 export const tables = mysqlTable("tables", {

@@ -25,6 +25,11 @@ export default function Navbar() {
   const location = useLocation();
 
   const customer = user && user.role !== "admin" ? user : null;
+  // An admin who's still signed in is NOT "logged out" — showing the Sign In
+  // button for them hides the fact that any customer-facing action (like
+  // placing a reservation) they take right now is attributed to their admin
+  // account. Surface that state explicitly instead of hiding it.
+  const isAdminUser = user?.role === "admin";
 
   useEffect(() => {
     const handleScroll = () => {
@@ -277,6 +282,39 @@ export default function Navbar() {
                     <Link to="/my-reservations">
                       {t("nav.myReservations")}
                     </Link>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuSeparator />
+
+                  <DropdownMenuItem
+                    onClick={logout}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    {t("nav.logout")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : isAdminUser ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  className="
+                    flex
+                    items-center
+                    gap-2
+                    text-gold-primary
+                    text-sm
+                    hover:text-cream
+                    transition-colors
+                    outline-none
+                  "
+                >
+                  <span>Admin ({user!.name || user!.email})</span>
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin">Dashboard</Link>
                   </DropdownMenuItem>
 
                   <DropdownMenuSeparator />
@@ -694,6 +732,68 @@ export default function Navbar() {
                       {t("nav.logout")}
                     </button>
                   </div>
+                </div>
+              ) : isAdminUser ? (
+                /* Signed in as admin */
+                <div className="space-y-3">
+                  <div
+                    className="
+                      px-4
+                      py-3
+                      rounded-xl
+                      bg-white/[0.03]
+                      border
+                      border-white/[0.06]
+                      text-gold-primary
+                      text-sm
+                    "
+                  >
+                    Signed in as admin ({user!.name || user!.email})
+                  </div>
+
+                  <Link
+                    to="/admin"
+                    onClick={closeMobileMenu}
+                    className="
+                      flex
+                      items-center
+                      justify-center
+                      w-full
+                      px-5
+                      py-3.5
+                      bg-gold-primary
+                      text-table-dark
+                      text-sm
+                      font-medium
+                      tracking-[0.05em]
+                      rounded-xl
+                      hover:bg-cream
+                      transition-all
+                    "
+                  >
+                    Dashboard
+                  </Link>
+
+                  <button
+                    onClick={() => {
+                      logout();
+                      closeMobileMenu();
+                    }}
+                    className="
+                      w-full
+                      text-left
+                      px-4
+                      py-3
+                      text-sm
+                      text-cream/45
+                      hover:text-red-400
+                      rounded-lg
+                      hover:bg-red-400/5
+                      transition-colors
+                    "
+                  >
+                    {t("nav.logout")}
+                  </button>
                 </div>
               ) : (
                 /* Guest Account */
