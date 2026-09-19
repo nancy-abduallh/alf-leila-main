@@ -35,6 +35,14 @@ export const translations = {
             add: "Add",
             outOfStock: "Out of stock",
             addedToCart: "added to cart",
+            signInToOrder: "Sign in to order",
+            signInToast: "Please sign in to place an order",
+            signInCta: "Sign In",
+            createAccount: "Create Account",
+            signInBanner:
+                "Sign in to place an order — use the account you created when you reserved your table.",
+            signInBannerTable:
+                "You're at Table {table}. Sign in to place an order — use the account you created when you reserved your table.",
             noResults: "No dishes found.",
             adjustFilters: "Try adjusting your filters.",
             couldNotLoad: "Couldn't load the menu.",
@@ -346,6 +354,14 @@ export const translations = {
             add: "أضف",
             outOfStock: "غير متوفر",
             addedToCart: "أُضيف إلى السلة",
+            signInToOrder: "سجّل الدخول للطلب",
+            signInToast: "يرجى تسجيل الدخول لإتمام الطلب",
+            signInCta: "تسجيل الدخول",
+            createAccount: "إنشاء حساب",
+            signInBanner:
+                "سجّل الدخول لتتمكن من الطلب — استخدم الحساب الذي أنشأته عند حجز طاولتك.",
+            signInBannerTable:
+                "أنت على الطاولة {table}. سجّل الدخول لتتمكن من الطلب — استخدم الحساب الذي أنشأته عند حجز طاولتك.",
             noResults: "لم يتم العثور على أطباق.",
             adjustFilters: "حاول تعديل الفلاتر.",
             couldNotLoad: "تعذر تحميل القائمة.",

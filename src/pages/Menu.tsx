@@ -4,9 +4,12 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { trpc } from "../providers/trpc";
 import { useCart } from "../providers/cart";
 import { useLanguage } from "../providers/language";
-import { Search, SlidersHorizontal, Plus, AlertTriangle } from "lucide-react";
+import { Search, SlidersHorizontal, Plus, AlertTriangle, Lock } from "lucide-react";
+import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useTableSession } from "../providers/tableSession";
+import { useAuth } from "../hooks/useAuth";
+import { loginPath, registerPath } from "../lib/redirect";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -38,6 +41,12 @@ const subcategoryOrder: Subcategory[] = [
 
 export default function Menu() {
   const { session: tableSession } = useTableSession();
+  const navigate = useNavigate();
+
+  // Ordering needs an account: diners reserve a table first, so they already
+  // have one. Guests can browse, but can't add anything to an order.
+  const { user, isLoading: authLoading } = useAuth();
+  const isGuest = !authLoading && !user;
 
   const [activeCategory, setActiveCategory] =
     useState<Category>("all");
@@ -134,6 +143,18 @@ export default function Menu() {
   const handleAddToCart = (
     dish: NonNullable<typeof allDishes>[number]
   ) => {
+    if (authLoading) return; // still finding out whether they're signed in
+
+    if (isGuest) {
+      toast.info(t("menu.signInToast"), {
+        action: {
+          label: t("menu.signInCta"),
+          onClick: () => navigate(loginPath("/menu")),
+        },
+      });
+      return;
+    }
+
     addItem({
       dishId: dish.id,
       name: getDishName(dish),
@@ -174,7 +195,36 @@ export default function Menu() {
         </div>
       </div>
 
-      {tableSession && (
+      {isGuest && (
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-12 pt-6">
+          <div className="bg-gold-primary/10 border border-gold-primary/30 rounded-lg px-4 py-4 text-gold-primary text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <p>
+              {tableSession
+                ? t("menu.signInBannerTable").replace(
+                  "{table}",
+                  tableSession.tableNumber
+                )
+                : t("menu.signInBanner")}
+            </p>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={() => navigate(loginPath("/menu"))}
+                className="px-4 py-2 bg-gold-primary text-table-dark text-xs font-medium rounded-full hover:bg-cream transition-colors"
+              >
+                {t("menu.signInCta")}
+              </button>
+              <button
+                onClick={() => navigate(registerPath("/menu"))}
+                className="px-4 py-2 border border-gold-primary text-gold-primary text-xs font-medium rounded-full hover:bg-gold-primary hover:text-table-dark transition-colors"
+              >
+                {t("menu.createAccount")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tableSession && !isGuest && (
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12 pt-6">
           <div className="bg-gold-primary/10 border border-gold-primary/30 rounded-lg px-4 py-3 text-gold-primary text-sm">
             Ordering for Table {tableSession.tableNumber} — anything you add will go to the kitchen together
@@ -438,11 +488,17 @@ export default function Menu() {
                           }
                         `}
                       >
-                        <Plus className="w-3.5 h-3.5" />
+                        {isGuest && !outOfStock ? (
+                          <Lock className="w-3.5 h-3.5" />
+                        ) : (
+                          <Plus className="w-3.5 h-3.5" />
+                        )}
 
                         {outOfStock
                           ? t("menu.outOfStock")
-                          : t("menu.add")}
+                          : isGuest
+                            ? t("menu.signInToOrder")
+                            : t("menu.add")}
                       </button>
                     </div>
                   </div>

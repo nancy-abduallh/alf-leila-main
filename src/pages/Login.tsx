@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import {
   Card,
   CardContent,
@@ -12,9 +12,14 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../providers/language";
+import { registerPath, safeRedirect } from "../lib/redirect";
 
 export default function Login() {
   const navigate = useNavigate();
+  // Where to go after signing in, e.g. /menu for a diner who was told to sign
+  // in before ordering. Falls back to the home page.
+  const [searchParams] = useSearchParams();
+  const redirectTo = safeRedirect(searchParams.get("redirect"), "/");
   const { login, isLoggingIn, loginError, refresh } = useAuth();
   const { t } = useLanguage();
   const [email, setEmail] = useState("");
@@ -25,7 +30,7 @@ export default function Login() {
     try {
       await login(email, password);
       const { data: freshUser } = await refresh();
-      navigate(freshUser?.role === "admin" ? "/admin" : "/");
+      navigate(freshUser?.role === "admin" ? "/admin" : redirectTo);
     } catch {
       // surfaced via loginError
     }
@@ -73,7 +78,7 @@ export default function Login() {
           </form>
           <p className="text-sm text-muted-foreground text-center mt-4">
             {t("auth.noAccount")}{" "}
-            <Link to="/register" className="text-primary underline underline-offset-4">
+            <Link to={registerPath(redirectTo === "/" ? undefined : redirectTo)} className="text-primary underline underline-offset-4">
               {t("auth.createOne")}
             </Link>
           </p>

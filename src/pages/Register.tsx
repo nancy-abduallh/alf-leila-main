@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import {
     Card,
     CardContent,
@@ -12,9 +12,12 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../providers/language";
+import { loginPath, safeRedirect } from "../lib/redirect";
 
 export default function Register() {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const redirectTo = safeRedirect(searchParams.get("redirect"), "/");
     const { register, isRegistering, registerError } = useAuth();
     const { t } = useLanguage();
     const [name, setName] = useState("");
@@ -25,7 +28,7 @@ export default function Register() {
         e.preventDefault();
         try {
             await register(name, email, password);
-            navigate("/");
+            navigate(redirectTo);
         } catch {
             // surfaced via registerError
         }
@@ -85,7 +88,7 @@ export default function Register() {
                     </form>
                     <p className="text-sm text-muted-foreground text-center mt-4">
                         {t("auth.haveAccount")}{" "}
-                        <Link to="/login" className="text-primary underline underline-offset-4">
+                        <Link to={loginPath(redirectTo === "/" ? undefined : redirectTo)} className="text-primary underline underline-offset-4">
                             {t("auth.signIn")}
                         </Link>
                     </p>

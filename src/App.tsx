@@ -19,6 +19,7 @@ import Register from "./pages/Register";
 import AdminLogin from "./pages/AdminLogin";
 import NotFound from "./pages/NotFound";
 import TableScan from "./pages/TableScan";
+import { clearQrPreview, isQrPreview } from "./providers/tableSession";
 import TableCheckout from "./pages/TableCheckout";
 import OrderPending from "./pages/OrderPending";
 
@@ -43,16 +44,30 @@ function PageViewTracker() {
  * That keeps the storefront honestly "logged out" for anyone using it, and
  * makes it impossible for an admin session to end up placing a customer
  * order/reservation by accident.
+ *
+ * One deliberate exception: scanning (or clicking) a table QR code. Admins
+ * generate those codes in the dashboard and need to test them, so a QR scan
+ * opens a per-tab "preview" that lets them see the diner experience. Going
+ * back to any /admin route ends the preview.
  */
 function AdminAwayFromStorefront({ isAdminRoute }: { isAdminRoute: boolean }) {
   const { isAdmin, isLoading } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   useEffect(() => {
-    if (!isLoading && isAdmin && !isAdminRoute) {
-      navigate("/admin", { replace: true });
+    if (isLoading || !isAdmin) return;
+
+    if (isAdminRoute) {
+      clearQrPreview();
+      return;
     }
-  }, [isLoading, isAdmin, isAdminRoute, navigate]);
+
+    const scanningQr = pathname.startsWith("/table/");
+    if (scanningQr || isQrPreview()) return;
+
+    navigate("/admin", { replace: true });
+  }, [isLoading, isAdmin, isAdminRoute, pathname, navigate]);
 
   return null;
 }

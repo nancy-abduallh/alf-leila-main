@@ -1,7 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { useTableSession } from "../providers/tableSession";
-import { Minus, Plus, Trash2, CheckCircle2, Clock, Users, ChefHat, BellRing } from "lucide-react";
+import {
+    Minus,
+    Plus,
+    Trash2,
+    CheckCircle2,
+    Clock,
+    Users,
+    ChefHat,
+    BellRing,
+    Search,
+    UtensilsCrossed,
+} from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "../providers/trpc";
 import type { RouterOutputs } from "../providers/trpc";
@@ -22,6 +33,19 @@ function useCountdown(target: Date | null) {
 
     return Math.max(0, msLeft);
 }
+
+type MenuDish = RouterOutputs["dish"]["list"][number];
+
+const MAX_PER_DISH = 50; // matches the server-side limit per line
+
+const pickerCategories = [
+    { id: "all", label: "All" },
+    { id: "main", label: "Main Courses" },
+    { id: "appetizer", label: "Appetizers" },
+    { id: "dessert", label: "Desserts" },
+    { id: "beverage", label: "Beverages" },
+    { id: "breakfast", label: "Breakfast" },
+] as const;
 
 type DraftItem = {
     dishId: number;
@@ -73,20 +97,44 @@ export default function OrderPending() {
 
     const [draftItems, setDraftItems] = useState<DraftItem[]>([]);
 
+    // "Add more items" picker — the menu is only fetched while the order can
+    // still be edited, and only once the diner opens the picker.
+    const [showPicker, setShowPicker] = useState(false);
+    const [pickerSearch, setPickerSearch] = useState("");
+    const [pickerCategory, setPickerCategory] = useState<string>("all");
+    const { data: menuDishes, isLoading: menuLoading } = trpc.dish.list.useQuery(undefined, {
+        enabled: isEditable && showPicker,
+    });
 
-    const [syncedData, setSyncedData] = useState<typeof data>(undefined);
-    if (data !== syncedData) {
-        setSyncedData(data);
-        if (data) {
-            setDraftItems(
-                data.items.map((i) => ({
-                    dishId: i.dishId,
-                    quantity: i.quantity,
-                    dishName: i.dishName,
-                    unitPrice: i.unitPrice,
-                })),
-            );
-        }
+    // Copy the saved items into the editable draft — but ONLY when the saved
+    // items themselves change (first load, after Save, or edited elsewhere).
+    //
+    // Don't key this off the query result object: getById polls every 5s and
+    // returns fresh Date objects each time, so the object identity changes on
+    // every poll even when nothing did. Syncing on that used to wipe whatever
+    // the diner had changed but not yet saved.
+    const serverItemsKey = useMemo(
+        () =>
+            data
+                ? JSON.stringify(
+                    [...data.items]
+                        .sort((a, b) => a.dishId - b.dishId)
+                        .map((i) => [i.dishId, i.quantity, i.unitPrice]),
+                )
+                : null,
+        [data],
+    );
+    const [syncedKey, setSyncedKey] = useState<string | null>(null);
+    if (data && serverItemsKey !== syncedKey) {
+        setSyncedKey(serverItemsKey);
+        setDraftItems(
+            data.items.map((i) => ({
+                dishId: i.dishId,
+                quantity: i.quantity,
+                dishName: i.dishName,
+                unitPrice: i.unitPrice,
+            })),
+        );
     }
 
     const updateItems = trpc.order.updateItems.useMutation({
@@ -103,6 +151,31 @@ export default function OrderPending() {
         [draftItems],
     );
 
+    // Has the diner changed anything that isn't saved yet?
+    const hasChanges = useMemo(() => {
+        if (!data) return false;
+        const saved = new Map(data.items.map((i) => [i.dishId, i.quantity]));
+        if (saved.size !== draftItems.length) return true;
+        return draftItems.some((i) => saved.get(i.dishId) !== i.quantity);
+    }, [data, draftItems]);
+
+    const draftQty = useMemo(
+        () => new Map(draftItems.map((i) => [i.dishId, i.quantity])),
+        [draftItems],
+    );
+
+    const pickerDishes = useMemo(() => {
+        const term = pickerSearch.trim().toLowerCase();
+        return (menuDishes ?? []).filter((d) => {
+            if (pickerCategory !== "all" && d.category !== pickerCategory) return false;
+            if (!term) return true;
+            return (
+                d.name.toLowerCase().includes(term) ||
+                (d.nameAr ? d.nameAr.toLowerCase().includes(term) : false)
+            );
+        });
+    }, [menuDishes, pickerSearch, pickerCategory]);
+
     const tableMates = useMemo(
         () => (batch?.orders ?? []).filter((o) => o.id !== id),
         [batch, id],
@@ -114,6 +187,25 @@ export default function OrderPending() {
                 ? prev.filter((i) => i.dishId !== dishId)
                 : prev.map((i) => (i.dishId === dishId ? { ...i, quantity } : i)),
         );
+    };
+
+    // Add one of a dish: bump the quantity if it's already in the order,
+    // otherwise append it as a new line.
+    const addDish = (dish: MenuDish) => {
+        setDraftItems((prev) => {
+            const existing = prev.find((i) => i.dishId === dish.id);
+            if (existing) {
+                return prev.map((i) =>
+                    i.dishId === dish.id
+                        ? { ...i, quantity: Math.min(MAX_PER_DISH, i.quantity + 1) }
+                        : i,
+                );
+            }
+            return [
+                ...prev,
+                { dishId: dish.id, quantity: 1, dishName: dish.name, unitPrice: dish.price },
+            ];
+        });
     };
 
     const saveChanges = () => {
@@ -235,14 +327,118 @@ export default function OrderPending() {
                             ))}
                         </div>
 
+                        {isEditable && (
+                            <div className="mb-8">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPicker((v) => !v)}
+                                    className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-gold-primary/40 text-gold-primary text-sm rounded-lg hover:bg-gold-primary/10 transition-colors"
+                                >
+                                    {showPicker ? (
+                                        <Minus className="w-4 h-4" />
+                                    ) : (
+                                        <Plus className="w-4 h-4" />
+                                    )}
+                                    {showPicker ? "Hide menu" : "Add more items"}
+                                </button>
+
+                                {showPicker && (
+                                    <div className="mt-4 bg-table-mid/60 border border-gold-primary/15 rounded-lg p-4">
+                                        <div className="relative mb-3">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-cream/40" />
+                                            <input
+                                                type="text"
+                                                value={pickerSearch}
+                                                onChange={(e) => setPickerSearch(e.target.value)}
+                                                placeholder="Search dishes..."
+                                                className="w-full pl-10 pr-4 py-2.5 bg-table-dark border border-gold-primary/20 rounded-lg text-cream text-sm placeholder:text-cream/30 focus:outline-none focus:border-gold-primary transition-colors"
+                                            />
+                                        </div>
+
+                                        <div className="flex gap-2 overflow-x-auto pb-2 mb-3">
+                                            {pickerCategories.map((cat) => (
+                                                <button
+                                                    key={cat.id}
+                                                    type="button"
+                                                    onClick={() => setPickerCategory(cat.id)}
+                                                    className={`flex-shrink-0 px-3.5 py-1.5 text-xs font-medium rounded-full whitespace-nowrap transition-colors ${pickerCategory === cat.id
+                                                        ? "bg-gold-primary text-table-dark"
+                                                        : "border border-gold-primary/30 text-cream/70 hover:border-gold-primary hover:text-gold-primary"
+                                                        }`}
+                                                >
+                                                    {cat.label}
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        <div className="max-h-80 overflow-y-auto space-y-2 pr-1">
+                                            {menuLoading ? (
+                                                <div className="flex justify-center py-8">
+                                                    <div className="w-6 h-6 border-2 border-gold-primary border-t-transparent rounded-full animate-spin" />
+                                                </div>
+                                            ) : pickerDishes.length === 0 ? (
+                                                <div className="text-center py-8 text-cream/40 text-sm">
+                                                    <UtensilsCrossed className="w-6 h-6 mx-auto mb-2 text-gold-primary/30" />
+                                                    No dishes match.
+                                                </div>
+                                            ) : (
+                                                pickerDishes.map((dish) => {
+                                                    const inOrder = draftQty.get(dish.id) ?? 0;
+                                                    const outOfStock = dish.stock !== null && dish.stock <= 0;
+                                                    return (
+                                                        <div
+                                                            key={dish.id}
+                                                            className="flex items-center justify-between gap-3 bg-table-dark border border-gold-primary/10 rounded-lg p-3"
+                                                        >
+                                                            <div className="min-w-0">
+                                                                <p className="text-cream text-sm font-medium truncate">
+                                                                    {dish.name}
+                                                                </p>
+                                                                <p className="text-cream/40 text-xs">
+                                                                    {dish.price} EGP
+                                                                    {inOrder > 0 && (
+                                                                        <span className="ml-2 text-gold-primary">
+                                                                            &times;{inOrder} in your order
+                                                                        </span>
+                                                                    )}
+                                                                </p>
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => addDish(dish)}
+                                                                disabled={outOfStock || inOrder >= MAX_PER_DISH}
+                                                                className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${outOfStock
+                                                                    ? "bg-cream/10 text-cream/30 cursor-not-allowed"
+                                                                    : "bg-gold-primary text-table-dark hover:bg-cream disabled:opacity-40"
+                                                                    }`}
+                                                            >
+                                                                <Plus className="w-3.5 h-3.5" />
+                                                                {outOfStock ? "Out of stock" : "Add"}
+                                                            </button>
+                                                        </div>
+                                                    );
+                                                })
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <div className="flex items-center justify-between border-t border-gold-primary/10 pt-4 mb-8">
                             <span className="text-cream/70">Total</span>
                             <span className="text-gold-primary text-xl font-display">{total.toFixed(2)} EGP</span>
                         </div>
 
+                        {isEditable && hasChanges && (
+                            <p className="text-gold-primary/80 text-xs text-center mb-3">
+                                You have unsaved changes — press Save Changes before the timer runs out.
+                            </p>
+                        )}
+
                         <button
                             onClick={saveChanges}
-                            disabled={!isEditable || updateItems.isPending}
+                            disabled={!isEditable || updateItems.isPending || !hasChanges}
                             className="w-full py-4 bg-gold-primary text-table-dark font-medium text-sm tracking-[0.05em] rounded-full hover:bg-cream hover:shadow-gold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {updateItems.isPending ? "Saving..." : "Save Changes"}

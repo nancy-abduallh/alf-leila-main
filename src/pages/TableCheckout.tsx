@@ -5,6 +5,7 @@ import { useCart } from "../providers/cart";
 import { useTableSession } from "../providers/tableSession";
 import { trpc } from "../providers/trpc";
 import { toast } from "sonner";
+import { loginPath, registerPath } from "../lib/redirect";
 import { Minus, Plus, Trash2, ShoppingBag, UtensilsCrossed } from "lucide-react";
 
 export default function TableCheckout() {
@@ -61,13 +62,13 @@ export default function TableCheckout() {
                     </p>
                     <div className="flex items-center justify-center gap-3">
                         <button
-                            onClick={() => navigate("/login")}
+                            onClick={() => navigate(loginPath("/table-checkout"))}
                             className="px-6 py-2.5 bg-gold-primary text-table-dark text-sm font-medium rounded-full hover:bg-cream transition-colors"
                         >
                             Sign In
                         </button>
                         <button
-                            onClick={() => navigate("/register")}
+                            onClick={() => navigate(registerPath("/table-checkout"))}
                             className="px-6 py-2.5 border border-gold-primary text-gold-primary text-sm font-medium rounded-full hover:bg-gold-primary hover:text-table-dark transition-colors"
                         >
                             Create Account

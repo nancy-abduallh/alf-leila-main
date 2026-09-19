@@ -132,8 +132,14 @@ export const orderRouter = createRouter({
         };
     }),
 
-    // Lets a diner change their own order's items while it's still inside
-    // the 5-minute window, before the batch is sent to the kitchen.
+    // Lets a diner change their own order while it's still inside the
+    // 5-minute window, before the batch is sent to the kitchen. `items` is the
+    // COMPLETE new list: change a quantity, remove a line, or add a dish that
+    // wasn't in the order before.
+    //
+    // Stock is settled as a delta against what the order already holds
+    // (create() took the original quantities), all inside one transaction so
+    // a failure half-way never leaves stock or items half-updated.
     updateItems: authedQuery
         .input(
             z.object({
@@ -143,56 +149,112 @@ export const orderRouter = createRouter({
         )
         .mutation(async ({ input, ctx }) => {
             const db = getDb();
-            const [order] = await db.select().from(orders).where(eq(orders.id, input.orderId));
 
-            if (!order || order.userId !== ctx.user.id) {
-                throw new TRPCError({ code: "NOT_FOUND", message: "Order not found" });
-            }
+            return db.transaction(async (tx) => {
+                const [order] = await tx
+                    .select()
+                    .from(orders)
+                    .where(eq(orders.id, input.orderId))
+                    .for("update");
 
-            if (
-                order.status !== "pending_edit" ||
-                !order.editableUntil ||
-                order.editableUntil.getTime() < Date.now()
-            ) {
-                throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message: "This order has already been sent to the kitchen and can't be edited.",
+                if (!order || order.userId !== ctx.user.id) {
+                    throw new TRPCError({ code: "NOT_FOUND", message: "Order not found" });
+                }
+
+                if (
+                    order.status !== "pending_edit" ||
+                    !order.editableUntil ||
+                    order.editableUntil.getTime() < Date.now()
+                ) {
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: "This order has already been sent to the kitchen and can't be edited.",
+                    });
+                }
+
+                // Same dish sent twice → one line.
+                const wanted = new Map<number, number>();
+                for (const i of input.items) {
+                    wanted.set(i.dishId, Math.min(50, (wanted.get(i.dishId) ?? 0) + i.quantity));
+                }
+
+                const existing = await tx
+                    .select()
+                    .from(orderItems)
+                    .where(eq(orderItems.orderId, input.orderId));
+                const before = new Map<number, number>();
+                for (const line of existing) {
+                    before.set(line.dishId, (before.get(line.dishId) ?? 0) + line.quantity);
+                }
+
+                const allIds = [...new Set([...wanted.keys(), ...before.keys()])];
+                const dbDishes = await tx
+                    .select()
+                    .from(dishes)
+                    .where(inArray(dishes.id, allIds))
+                    .for("update");
+                const dishMap = new Map(dbDishes.map((d) => [d.id, d]));
+
+                for (const dishId of wanted.keys()) {
+                    if (!dishMap.has(dishId)) {
+                        throw new TRPCError({ code: "BAD_REQUEST", message: "One or more dishes not found" });
+                    }
+                }
+
+                // Only the CHANGE in quantity touches stock: +2 takes two more
+                // off the shelf, -1 gives one back, an unchanged line does nothing.
+                for (const dishId of allIds) {
+                    const dish = dishMap.get(dishId);
+                    if (!dish || dish.stock === null) continue; // gone, or unlimited
+                    const delta = (wanted.get(dishId) ?? 0) - (before.get(dishId) ?? 0);
+                    if (delta === 0) continue;
+                    if (delta > 0 && dish.stock < delta) {
+                        throw new TRPCError({
+                            code: "BAD_REQUEST",
+                            message:
+                                dish.stock <= 0
+                                    ? `${dish.name} is out of stock`
+                                    : `${dish.name} only has ${dish.stock} left in stock`,
+                        });
+                    }
+                    await tx
+                        .update(dishes)
+                        .set({ stock: dish.stock - delta })
+                        .where(eq(dishes.id, dish.id));
+                }
+
+                // Dishes already in the order keep the price the diner saw when
+                // they ordered (so the total on screen matches what's saved);
+                // newly added dishes are priced at today's menu price.
+                const quoted = new Map(existing.map((l) => [l.dishId, l]));
+                let totalCents = 0;
+                const lineItems = [...wanted].map(([dishId, quantity]) => {
+                    const dish = dishMap.get(dishId)!;
+                    const prior = quoted.get(dishId);
+                    const unitPrice = prior ? prior.unitPrice : dish.price;
+                    totalCents += Math.round(parseFloat(unitPrice) * 100) * quantity;
+                    return {
+                        orderId: input.orderId,
+                        dishId,
+                        dishName: prior ? prior.dishName : dish.name,
+                        unitPrice,
+                        quantity,
+                    };
                 });
-            }
 
-            const dishIds = input.items.map((i) => i.dishId);
-            const dbDishes = await db.select().from(dishes).where(inArray(dishes.id, dishIds));
-            if (dbDishes.length !== new Set(dishIds).size) {
-                throw new TRPCError({ code: "BAD_REQUEST", message: "One or more dishes not found" });
-            }
-            const dishMap = new Map(dbDishes.map((d) => [d.id, d]));
+                await tx.delete(orderItems).where(eq(orderItems.orderId, input.orderId));
+                await tx.insert(orderItems).values(lineItems);
+                await tx
+                    .update(orders)
+                    .set({ totalAmount: (totalCents / 100).toFixed(2) })
+                    .where(eq(orders.id, input.orderId));
 
-            let totalCents = 0;
-            const lineItems = input.items.map((item) => {
-                const dish = dishMap.get(item.dishId)!;
-                const unitCents = Math.round(parseFloat(dish.price) * 100);
-                totalCents += unitCents * item.quantity;
                 return {
-                    orderId: input.orderId,
-                    dishId: dish.id,
-                    dishName: dish.name,
-                    unitPrice: dish.price,
-                    quantity: item.quantity,
+                    success: true,
+                    totalAmount: (totalCents / 100).toFixed(2),
+                    editableUntil: order.editableUntil,
                 };
             });
-
-            await db.delete(orderItems).where(eq(orderItems.orderId, input.orderId));
-            await db.insert(orderItems).values(lineItems);
-            await db
-                .update(orders)
-                .set({ totalAmount: (totalCents / 100).toFixed(2) })
-                .where(eq(orders.id, input.orderId));
-
-            return {
-                success: true,
-                totalAmount: (totalCents / 100).toFixed(2),
-                editableUntil: order.editableUntil,
-            };
         }),
 
     myOrders: authedQuery.query(async ({ ctx }) => {

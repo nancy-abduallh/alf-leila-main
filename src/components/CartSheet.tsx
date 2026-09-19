@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 import { Minus, Plus, ShoppingBag, Trash2, QrCode } from "lucide-react";
 import {
     Sheet,
@@ -6,10 +6,12 @@ import {
     SheetHeader,
     SheetTitle,
     SheetFooter,
-} from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
-import { useCart } from "@/providers/cart";
-import { useTableSession } from "@/providers/tableSession";
+} from "../components/ui/sheet";
+import { Button } from "../components/ui/button";
+import { useCart } from "../providers/cart";
+import { useTableSession } from "../providers/tableSession";
+import { useAuth } from "../hooks/useAuth";
+import { loginPath, registerPath } from "../lib/redirect";
 
 type CartSheetProps = {
     open: boolean;
@@ -19,6 +21,11 @@ type CartSheetProps = {
 export function CartSheet({ open, onOpenChange }: CartSheetProps) {
     const { items, updateQuantity, removeItem, totalPrice } = useCart();
     const { session } = useTableSession();
+    const { user, isLoading: authLoading } = useAuth();
+    const { pathname } = useLocation();
+
+    // Come back to checkout (or wherever they were) after signing in.
+    const returnTo = session ? "/table-checkout" : pathname;
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
@@ -80,7 +87,23 @@ export function CartSheet({ open, onOpenChange }: CartSheetProps) {
                             <span>Total</span>
                             <span>{totalPrice.toFixed(2)} EGP</span>
                         </div>
-                        {session ? (
+                        {!authLoading && !user ? (
+                            <div className="text-center space-y-3">
+                                <p className="text-muted-foreground text-sm">
+                                    Sign in to place your order — use the account you created when you reserved your table.
+                                </p>
+                                <Button asChild className="w-full" size="lg" onClick={() => onOpenChange(false)}>
+                                    <Link to={loginPath(returnTo)}>Sign In to Order</Link>
+                                </Button>
+                                <Link
+                                    to={registerPath(returnTo)}
+                                    onClick={() => onOpenChange(false)}
+                                    className="block text-sm text-muted-foreground underline underline-offset-4"
+                                >
+                                    Create an account
+                                </Link>
+                            </div>
+                        ) : session ? (
                             <Button asChild className="w-full" size="lg" onClick={() => onOpenChange(false)}>
                                 <Link to="/table-checkout">
                                     Send Order to Kitchen — Table {session.tableNumber}
