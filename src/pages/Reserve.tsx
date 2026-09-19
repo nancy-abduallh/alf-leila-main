@@ -17,6 +17,15 @@ import {
 
 type Assigned = { tableNumber: string; area: string | null; areaMatched: boolean };
 
+/** Today as YYYY-MM-DD in the guest's own timezone (toISOString() is UTC and
+ *  would show "yesterday" as the minimum date for a few hours around midnight). */
+function todayLocal(): string {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+
 export default function Reserve() {
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -36,9 +45,17 @@ export default function Reserve() {
 
   // Live look at what's left for this slot, so the guest isn't surprised
   // only after hitting submit.
+  // Never trust a cached answer: other guests book tables all the time, so
+  // always refetch on mount/focus and keep polling while the form is open.
   const availability = trpc.reservation.availability.useQuery(
     { date: formData.date, time: formData.time, guests: guestCount },
-    { enabled: Boolean(formData.date && formData.time) },
+    {
+      enabled: Boolean(formData.date && formData.time),
+      staleTime: 0,
+      refetchOnMount: "always",
+      refetchOnWindowFocus: true,
+      refetchInterval: 20_000,
+    },
   );
 
   const utils = trpc.useUtils();
@@ -51,6 +68,11 @@ export default function Reserve() {
       });
       // So the "X tables available" count is correct if the guest (or staff
       // testing in the same tab) books again for the same slot afterwards.
+      utils.reservation.availability.invalidate();
+    },
+    // Someone else grabbed the table first (or the slot filled up) — refresh
+    // the count so the form reflects reality instead of the stale number.
+    onError: () => {
       utils.reservation.availability.invalidate();
     },
   });
@@ -219,7 +241,7 @@ export default function Reserve() {
                   required
                   value={formData.date}
                   onChange={handleChange}
-                  min={new Date().toISOString().split("T")[0]}
+                  min={todayLocal()}
                   className="w-full px-4 py-3 bg-table-mid border border-gold-primary/20 rounded-lg text-cream text-sm focus:outline-none focus:border-gold-primary transition-colors"
                 />
               </div>

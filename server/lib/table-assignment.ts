@@ -26,6 +26,27 @@ export type BookedSlot = {
     time: string;
 };
 
+/**
+ * Reduces whatever we're handed to a plain "YYYY-MM-DD" calendar day.
+ *
+ * Why this exists: the reservations.date column is a MySQL DATE. If a JS Date
+ * is passed into a query, mysql2 serialises it as a *datetime string in the
+ * server's timezone* (e.g. '2026-09-30 03:00:00.000' in Cairo), and MySQL only
+ * treats `DATE = 'YYYY-MM-DD HH:MM:SS'` as equal when the time part is exactly
+ * midnight. Result: the day filter silently matched nothing, so every table
+ * looked free. Always compare/insert dates as plain strings instead.
+ */
+export function toDayString(value: string | Date): string {
+    if (value instanceof Date) {
+        // drizzle hands DATE columns back as `new Date("YYYY-MM-DD")` = UTC midnight,
+        // so the UTC parts are the calendar day that was stored.
+        return value.toISOString().slice(0, 10);
+    }
+    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value.trim());
+    if (!match) throw new Error(`Invalid date "${value}" — expected YYYY-MM-DD`);
+    return `${match[1]}-${match[2]}-${match[3]}`;
+}
+
 /** "19:00" or "19:00:00" → minutes since midnight. */
 export function timeToMinutes(value: string): number {
     const [h = "0", m = "0"] = value.split(":");

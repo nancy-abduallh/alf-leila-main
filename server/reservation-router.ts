@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, ne } from "drizzle-orm";
+import { and, desc, eq, ne, sql } from "drizzle-orm";
 import { createRouter, authedQuery, adminQuery } from "./middleware";
 import { getDb } from "./queries/connection";
 import { reservations, tables } from "@db/schema";
@@ -10,22 +10,38 @@ import {
   normalizeTime,
   pickTable,
   slotsConflict,
+  toDayString,
   type AssignableTable,
   type BookedSlot,
 } from "./lib/table-assignment";
 
+/** What the <input type="date"> sends: "2026-09-30". */
+const dayInput = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}/, "Date must be in YYYY-MM-DD format");
+
 const bookingInput = z.object({
   phone: z.string().optional(),
-  date: z.string(),
+  date: dayInput,
   time: z.string(),
   guests: z.number().min(1).max(20),
   notes: z.string().optional(),
   preferredArea: z.enum(RESERVATION_AREA_IDS).optional(),
 });
 
-/** Rows that already hold a table on `day`, cancelled ones excluded. */
-const liveOnDay = (day: Date) =>
-  and(eq(reservations.date, day), ne(reservations.status, "cancelled"));
+/**
+ * Rows that already hold a table on `day` ("YYYY-MM-DD"), cancelled ones excluded.
+ *
+ * The day is compared as a plain string cast to DATE — NOT as a JS Date.
+ * Passing a Date makes mysql2 send '2026-09-30 03:00:00.000' (server-local
+ * time), which never equals a DATE column, so every existing booking was
+ * invisible and all tables always looked free.
+ */
+const liveOnDay = (day: string) =>
+  and(
+    sql`${reservations.date} = CAST(${day} AS DATE)`,
+    ne(reservations.status, "cancelled"),
+  );
 
 export const reservationRouter = createRouter({
   /**
@@ -37,7 +53,7 @@ export const reservationRouter = createRouter({
    */
   create: authedQuery.input(bookingInput).mutation(async ({ input, ctx }) => {
     const db = getDb();
-    const day = new Date(input.date);
+    const day = toDayString(input.date);
     const time = normalizeTime(input.time);
 
     return db.transaction(async (tx) => {
@@ -91,7 +107,8 @@ export const reservationRouter = createRouter({
           name: ctx.user.name || "Guest",
           email: ctx.user.email,
           phone: input.phone,
-          date: day,
+          // Plain string → no timezone shifting on the way into the DATE column.
+          date: sql`CAST(${day} AS DATE)`,
           time,
           guests: input.guests,
           notes: input.notes,
@@ -141,14 +158,14 @@ export const reservationRouter = createRouter({
   availability: authedQuery
     .input(
       z.object({
-        date: z.string(),
+        date: dayInput,
         time: z.string(),
         guests: z.number().min(1).max(20),
       }),
     )
     .query(async ({ input }) => {
       const db = getDb();
-      const day = new Date(input.date);
+      const day = toDayString(input.date);
       const time = normalizeTime(input.time);
 
       const diningRoom: AssignableTable[] = await db
@@ -285,7 +302,7 @@ export const reservationRouter = createRouter({
           time: reservations.time,
         })
         .from(reservations)
-        .where(liveOnDay(new Date(target.date)));
+        .where(liveOnDay(toDayString(target.date)));
 
       const clash = sameDay.some(
         (r) =>
