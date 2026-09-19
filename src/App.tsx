@@ -1,9 +1,10 @@
 import { useEffect } from "react";
-import { Routes, Route, useLocation } from "react-router";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import { Toaster } from "@/components/ui/sonner";
-import { trpc } from "@/providers/trpc";
+import { Routes, Route, useLocation, useNavigate } from "react-router";
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
+import { Toaster } from "./components/ui/sonner";
+import { trpc } from "./providers/trpc";
+import { useAuth } from "./hooks/useAuth";
 import Home from "./pages/Home";
 import Menu from "./pages/Menu";
 import Story from "./pages/Story";
@@ -33,6 +34,29 @@ function PageViewTracker() {
   return null;
 }
 
+/**
+ * An admin account has no business browsing the storefront as "itself" —
+ * every customer action (reserving, ordering, reviewing) belongs to a guest
+ * or diner, not to staff. Rather than surface "you're signed in as admin" on
+ * every public page and trust each page to refuse to act on it, bounce the
+ * admin straight to the dashboard the moment they're on a non-admin route.
+ * That keeps the storefront honestly "logged out" for anyone using it, and
+ * makes it impossible for an admin session to end up placing a customer
+ * order/reservation by accident.
+ */
+function AdminAwayFromStorefront({ isAdminRoute }: { isAdminRoute: boolean }) {
+  const { isAdmin, isLoading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isLoading && isAdmin && !isAdminRoute) {
+      navigate("/admin", { replace: true });
+    }
+  }, [isLoading, isAdmin, isAdminRoute, navigate]);
+
+  return null;
+}
+
 export default function App() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith("/admin");
@@ -40,6 +64,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-table-dark">
       <PageViewTracker />
+      <AdminAwayFromStorefront isAdminRoute={isAdminRoute} />
       {!isAdminRoute && <Navbar />}
       <Routes>
         <Route path="/" element={<Home />} />
