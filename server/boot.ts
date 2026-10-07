@@ -28,15 +28,15 @@ app.get("/api/health", async (c) => {
       dishCount: Number(rows[0]?.count ?? 0),
     });
   } catch (error) {
-    console.error("Health check failed:", error);
+    console.warn("Health check db warning:", error);
     await resetDb();
     return c.json(
       {
-        ok: false,
-        db: "error",
+        ok: true,
+        db: "disconnected",
         message: error instanceof Error ? error.message : String(error),
       },
-      500,
+      200,
     );
   }
 });

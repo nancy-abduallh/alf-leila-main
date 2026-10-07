@@ -38,3 +38,7 @@ build/
 # Test coverage
 coverage/
 .nyc_output/
+
+# Local tools
+powershell.cmd
+
